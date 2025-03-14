@@ -75,82 +75,6 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Terazi güncelleme işlemi
-    const updateWeightInterval = startWeightUpdater('weight-display', 'weight-status', 500);
-
-    // Sayfadan ayrılırken interval'ı durdur
-    window.addEventListener('beforeunload', function() {
-        clearInterval(updateWeightInterval);
-    });
-
-    // Son işlemler tablosunda arama yapma
-    const searchInput = document.querySelector('.search-input');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            const tableRows = document.querySelectorAll('#recent-logs-table tbody tr');
-
-            tableRows.forEach(row => {
-                const rowText = row.textContent.toLowerCase();
-                row.style.display = rowText.includes(searchTerm) ? '' : 'none';
-            });
-        });
-    }
-
-    // Mobil cihazlarda bölge durumlarını optimize et
-    const optimizeRegionStatus = function() {
-        if (window.innerWidth <= 768) {
-            const regionGrid = document.querySelector('.region-status-grid');
-            if (regionGrid) {
-                regionGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
-            }
-        } else {
-            const regionGrid = document.querySelector('.region-status-grid');
-            if (regionGrid) {
-                regionGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
-            }
-        }
-    };
-
-    optimizeRegionStatus();
-    window.addEventListener('resize', optimizeRegionStatus);
-
-    // Terazi manuel sıfırlama butonu
-    const tareButton = document.querySelector('[title="Teraziyi Sıfırla"]');
-    if (tareButton) {
-        tareButton.addEventListener('click', async function(e) {
-            e.preventDefault();
-
-            // Buton durumunu güncelle
-            this.classList.add('disabled');
-            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
-
-            try {
-                // API isteği yap
-                const result = await tareScale();
-
-                if (result && !result.error) {
-                    showNotification('Terazi başarıyla sıfırlandı', 'success');
-                } else {
-                    showNotification(result.error || 'Terazi sıfırlanamadı', 'danger');
-                }
-            } catch (error) {
-                showNotification('Bir hata oluştu: ' + error.message, 'danger');
-            } finally {
-                // Butonu eski haline getir
-                this.classList.remove('disabled');
-                this.innerHTML = '<i class="fas fa-balance-scale"></i>';
-            }
-        });
-    }
-});
-</script>
-{% endblock %}
 
 <!-- Son İşlemler -->
 <div class="row">
@@ -273,3 +197,179 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Terazi güncelleme işlemi
+    const updateWeightInterval = startWeightUpdater('weight-display', 'weight-status', 500);
+
+    // Sayfadan ayrılırken interval'ı durdur
+    window.addEventListener('beforeunload', function() {
+        clearInterval(updateWeightInterval);
+    });
+
+    // Son işlemler tablosunda arama yapma
+    const searchInput = document.querySelector('.search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('#recent-logs-table tbody tr');
+
+            tableRows.forEach(row => {
+                const rowText = row.textContent.toLowerCase();
+                row.style.display = rowText.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    }
+
+    // Mobil cihazlarda bölge durumlarını optimize et
+    const optimizeRegionStatus = function() {
+        if (window.innerWidth <= 768) {
+            const regionGrid = document.querySelector('.region-status-grid');
+            if (regionGrid) {
+                regionGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
+            }
+        } else {
+            const regionGrid = document.querySelector('.region-status-grid');
+            if (regionGrid) {
+                regionGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+            }
+        }
+    };
+
+    optimizeRegionStatus();
+    window.addEventListener('resize', optimizeRegionStatus);
+
+    // Terazi manuel sıfırlama butonu
+    const tareButton = document.querySelector('[title="Teraziyi Sıfırla"]');
+    if (tareButton) {
+        tareButton.addEventListener('click', async function(e) {
+            e.preventDefault();
+
+            // Buton durumunu güncelle
+            this.classList.add('disabled');
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+            try {
+                // API isteği yap
+                const result = await tareScale();
+
+                if (result && !result.error) {
+                    showNotification('Terazi başarıyla sıfırlandı', 'success');
+                } else {
+                    showNotification(result.error || 'Terazi sıfırlanamadı', 'danger');
+                }
+            } catch (error) {
+                showNotification('Bir hata oluştu: ' + error.message, 'danger');
+            } finally {
+                // Butonu eski haline getir
+                this.classList.remove('disabled');
+                this.innerHTML = '<i class="fas fa-balance-scale"></i>';
+            }
+        });
+    }
+
+    // Bölge durumlarını güncelleme
+    function updateRegionInfo() {
+        fetch(`/api/status/${encodeURIComponent('{{ selected_setting }}')}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Bölge bilgileri alınamadı');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Bölge verileri:", data); // Debugging için
+                if (data && data.status) {
+                    // Veriyi göstermek için HTML'i güncelle
+                    const regionStatus = data.status;
+                    const regionContainer = document.querySelector('.region-status-grid');
+
+                    if (regionContainer) {
+                        // Mevcut içeriği temizle
+                        regionContainer.innerHTML = '';
+
+                        let hasContent = false;
+                        // Her bölge için bir kart oluştur
+                        for (const [region, settings] of Object.entries(regionStatus)) {
+                            for (const [setting, gram] of Object.entries(settings)) {
+                                hasContent = true;
+                                let regionTr = region;
+
+                                // Bölge adı çevirisi
+                                if (region === 'safe') regionTr = 'kasa';
+                                else if (region === 'table') regionTr = 'masa';
+                                else if (region === 'polish') regionTr = 'cila';
+                                else if (region === 'melting') regionTr = 'eritme';
+                                else if (region === 'saw') regionTr = 'patlatma';
+                                else if (region === 'acid') regionTr = 'boru';
+
+                                const item = document.createElement('div');
+                                item.className = 'region-status-item';
+
+                                // İkon seçimi
+                                let iconClass = 'fa-box';
+                                if (region === 'safe') iconClass = 'fa-vault';
+                                else if (region === 'table') iconClass = 'fa-table';
+                                else if (region === 'polish') iconClass = 'fa-brush';
+                                else if (region === 'melting') iconClass = 'fa-fire';
+                                else if (region === 'saw') iconClass = 'fa-cut';
+                                else if (region === 'acid') iconClass = 'fa-flask';
+
+                                // İçerik oluşturma
+                                item.innerHTML = `
+                                    <div class="region-icon-container">
+                                        <i class="fas ${iconClass} region-icon"></i>
+                                    </div>
+                                    <div class="region-details">
+                                        <h6 class="mb-0">${regionTr}</h6>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="region-amount fw-bold ${gram > 0 ? 'text-success' : 'text-muted'}">${parseFloat(gram).toFixed(2)} g</span>
+                                            <span class="region-setting badge bg-primary">${setting}</span>
+                                        </div>
+                                    </div>
+                                `;
+
+                                regionContainer.appendChild(item);
+                            }
+                        }
+
+                        // Hiç veri yoksa mesaj göster
+                        if (!hasContent) {
+                            regionContainer.innerHTML = `
+                                <div class="alert alert-info m-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Gösterilecek bölge bilgisi bulunamadı. Lütfen işlem yapmayı deneyiniz.
+                                </div>
+                            `;
+                        }
+                    }
+                } else {
+                    console.error('Bölge verileri uygun formatta değil:', data);
+                }
+            })
+            .catch(error => {
+                console.error('Bölge bilgileri yüklenirken hata:', error);
+                // Hata mesajını kullanıcıya göster
+                const regionContainer = document.querySelector('.region-status-grid');
+                if (regionContainer) {
+                    regionContainer.innerHTML = `
+                        <div class="alert alert-danger m-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Bölge bilgileri yüklenemedi. Lütfen daha sonra tekrar deneyiniz.
+                        </div>
+                    `;
+                }
+            });
+    }
+
+    // Sayfa yüklendiğinde çağır
+    updateRegionInfo();
+
+    // Belirli aralıklarla güncelle (isteğe bağlı)
+    setInterval(updateRegionInfo, 30000); // Her 30 saniyede bir güncelle
+});
+</script>
+{% endblock %}

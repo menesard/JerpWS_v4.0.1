@@ -64,7 +64,6 @@ def tare_scale():
 
 
 @api_bp.route('/status/<setting>', methods=['GET'])
-@jwt_required()
 def get_status(setting):
     """Belirli bir ayar için sistem durumunu döndür"""
     status = SystemManager.get_status(setting)
@@ -72,7 +71,6 @@ def get_status(setting):
 
 
 @api_bp.route('/logs', methods=['GET'])
-@jwt_required()
 def get_logs():
     """İşlem kayıtlarını döndür"""
     limit = request.args.get('limit', 50, type=int)

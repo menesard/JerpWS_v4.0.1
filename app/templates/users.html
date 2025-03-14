@@ -96,7 +96,8 @@
                             <tr data-username="{{ user.username }}"
                                 data-role="{{ user.role }}"
                                 data-created-by="{{ user.created_by.username if user.created_by else '' }}"
-                                data-created-at="{{ user.created_at.strftime('%Y-%m-%d') }}">
+                                data-created-at="{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '' }}">
+
                                 <td>{{ user.username }}</td>
                                 <td>
                                     <span class="badge {% if user.is_admin %}bg-danger{% elif user.role == 'manager' %}bg-warning text-dark{% else %}bg-info{% endif %}">
@@ -104,7 +105,7 @@
                                     </span>
                                 </td>
                                 <td>{{ user.created_by.username if user.created_by else "-" }}</td>
-                                <td>{{ user.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+                                <td>{{ user.created_at.strftime('%d-%m-%Y %H:%M') if user.created_at else "-" }}</td>
                                 <td class="text-end">
                                     <div class="btn-group" role="group">
                                         <a href="{{ url_for('main.user_operations', user_id=user.id) }}"
@@ -141,7 +142,7 @@
                      data-username="{{ user.username }}"
                      data-role="{{ user.role }}"
                      data-created-by="{{ user.created_by.username if user.created_by else '' }}"
-                     data-created-at="{{ user.created_at.strftime('%Y-%m-%d') }}">
+                     data-created-at="{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '' }}">
                     <div class="card shadow-sm h-100">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -156,7 +157,7 @@
                             <div class="card-text">
                                 <p class="mb-1">
                                     <i class="fas fa-calendar-alt me-2 text-muted"></i>
-                                    {{ user.created_at.strftime('%d-%m-%Y %H:%M') }}
+                                    {{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else "-" }}
                                 </p>
                                 <p class="mb-3">
                                     <i class="fas fa-user-plus me-2 text-muted"></i>

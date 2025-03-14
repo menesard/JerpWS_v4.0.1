@@ -13,7 +13,7 @@
                 <a href="{{ url_for('main.users') }}" class="btn btn-outline-secondary me-2">
                     <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Kullanıcılara Dön</span>
                 </a>
-                <a href="{{ url_for('main.user_edit', user_id=user.id) }}" class="btn btn-primary">
+                <a href="{{ url_for('main.edit_user', user_id=user.id) }}" class="btn btn-primary">
                     <i class="fas fa-user-edit me-1"></i><span class="d-none d-md-inline-block">Kullanıcıyı Düzenle</span>
                 </a>
             </div>
@@ -46,7 +46,7 @@
                             </dd>
 
                             <dt class="col-sm-5">Oluşturulma Tarihi:</dt>
-                            <dd class="col-sm-7">{{ user.created_at.strftime('%d-%m-%Y %H:%M') }}</dd>
+                            <dd class="col-sm-7">{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else "-" }}</dd>
                         </dl>
                     </div>
                     <div class="col-md-6">

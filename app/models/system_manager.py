@@ -190,7 +190,7 @@ class SystemManager:
                 Operation.operation_type == OPERATION_SUBTRACT
             ).scalar()
 
-            status[region_name] = {setting_name: added - subtracted}
+            status[region_name] = {setting_name: float(added - subtracted)}
 
         return status
 

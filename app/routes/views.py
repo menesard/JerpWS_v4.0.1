@@ -25,6 +25,9 @@ def index():
     return redirect(url_for('main.dashboard'))
 
 
+from flask_jwt_extended import create_access_token
+
+
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Giriş sayfası"""
@@ -38,9 +41,15 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
-            return redirect(url_for('main.dashboard'))
+
+            # JWT token oluştur ve yanıta ekle
+            access_token = create_access_token(identity=username)
+            response = make_response(redirect(url_for('main.dashboard')))
+            response.set_cookie('jwt_token', access_token, httponly=False)
+
+            return response
         else:
-            flash('Hatalı kullanıcı adı veya şifre!')
+            flash('Hatalı kullanıcı adı veya şifre!', 'danger')
 
     return render_template('login.html')
 
