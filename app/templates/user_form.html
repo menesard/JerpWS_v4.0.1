@@ -5,66 +5,130 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <h2 class="border-bottom pb-2"><i class="fas fa-user-plus me-2"></i>Yeni Kullanıcı Ekle</h2>
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-user-plus me-2"></i>Yeni Kullanıcı Oluştur
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.users') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Kullanıcılara Dön</span>
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-lg-8 col-md-10">
         <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-user-edit me-2"></i>Kullanıcı Bilgileri</h5>
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-edit me-2"></i>Kullanıcı Bilgileri
+                </h5>
+                <span class="badge bg-light text-dark">Yeni Hesap</span>
             </div>
             <div class="card-body">
-                <form method="post" class="needs-validation" novalidate>
+                <form method="post" class="needs-validation" novalidate id="newUserForm">
                     <div class="mb-3">
-                        <label for="username" class="form-label">Kullanıcı Adı *</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
-                        <div class="invalid-feedback">
-                            Kullanıcı adı gereklidir.
+                        <label for="username" class="form-label">Kullanıcı Adı <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control"
+                                   id="username"
+                                   name="username"
+                                   required
+                                   minlength="3"
+                                   maxlength="64"
+                                   pattern="^[a-zA-Z0-9_]+$">
+                            <div class="invalid-feedback">
+                                Kullanıcı adı gereklidir (3-64 karakter, sadece harf, rakam ve alt çizgi)
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Şifre *</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                        <div class="invalid-feedback">
-                            Şifre gereklidir.
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="confirm_password" class="form-label">Şifre (Tekrar) *</label>
-                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                        <div class="invalid-feedback">
-                            Şifre tekrarı gereklidir.
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="role" class="form-label">Kullanıcı Rolü *</label>
-                        <select class="form-select" id="role" name="role" required>
-                            <option value="staff">Görevli</option>
-                            <option value="manager">Yönetici</option>
-                            {% if current_user.is_admin %}
-                            <option value="admin">Admin</option>
-                            {% endif %}
-                        </select>
                         <div class="form-text">
-                            <strong>Görevli:</strong> Sadece atölye içi işlem yapabilir.<br>
-                            <strong>Yönetici:</strong> Müşteri, hesap, görevli kullanıcı işlemleri yapabilir.<br>
+                            Kullanıcı adı 3-64 karakter arası olmalı, boşluk veya özel karakter içermemelidir.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Şifre <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password"
+                                   class="form-control"
+                                   id="password"
+                                   name="password"
+                                   required
+                                   minlength="8">
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <div class="invalid-feedback">
+                                Şifre gereklidir (en az 8 karakter)
+                            </div>
+                        </div>
+                        <div class="form-text">
+                            Şifre en az 8 karakter uzunluğunda olmalıdır.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Şifre (Tekrar) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password"
+                                   class="form-control"
+                                   id="confirm_password"
+                                   name="confirm_password"
+                                   required>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <div class="invalid-feedback">
+                                Şifre tekrarı gereklidir
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Kullanıcı Rolü <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="" disabled selected>Rol Seçin</option>
+                                <option value="staff">Görevli</option>
+                                <option value="manager">Yönetici</option>
+                                {% if current_user.is_admin %}
+                                <option value="admin">Admin</option>
+                                {% endif %}
+                            </select>
+                            <div class="invalid-feedback">
+                                Kullanıcı rolü seçmeniz gerekiyor
+                            </div>
+                        </div>
+                        <div class="form-text">
+                            <strong>Görevli:</strong> Temel işlemler yapabilir.<br>
+                            <strong>Yönetici:</strong> Kullanıcı ve müşteri işlemleri yapabilir.<br>
                             {% if current_user.is_admin %}
-                            <strong>Admin:</strong> Sistem üzerinde tam yetkiye sahiptir.
+                            <strong>Admin:</strong> Tüm sistem yetkilerine sahiptir.
                             {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <div>
+                                <strong>Dikkat:</strong> Kullanıcı oluşturulduktan sonra bazı ayarları değiştirebilirsiniz.
+                            </div>
                         </div>
                     </div>
 
                     <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('main.users') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-1"></i>Geri
+                        <a href="{{ url_for('main.users') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>İptal
                         </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i>Kaydet
+                            <i class="fas fa-save me-1"></i>Kullanıcı Oluştur
                         </button>
                     </div>
                 </form>
@@ -72,4 +136,113 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Şifre görünürlüğü toggle fonksiyonları
+    function setupPasswordToggle(passwordInputId, toggleButtonId) {
+        const passwordInput = document.getElementById(passwordInputId);
+        const toggleButton = document.getElementById(toggleButtonId);
+
+        toggleButton.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            // İkon değişimi
+            const icon = this.querySelector('i');
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        });
+    }
+
+    // Şifre görünürlüğü toggle ayarları
+    setupPasswordToggle('password', 'togglePassword');
+    setupPasswordToggle('confirm_password', 'toggleConfirmPassword');
+
+    // Form doğrulama
+    const newUserForm = document.getElementById('newUserForm');
+
+    newUserForm.addEventListener('submit', function(event) {
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirm_password');
+        const roleSelect = document.getElementById('role');
+
+        // Kullanıcı adı doğrulaması
+        const usernameRegex = /^[a-zA-Z0-9_]+$/;
+        if (!usernameRegex.test(usernameInput.value)) {
+            event.preventDefault();
+            usernameInput.setCustomValidity('Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir');
+            usernameInput.reportValidity();
+            return;
+        }
+
+        // Şifre doğrulaması
+        if (passwordInput.value.length < 8) {
+            event.preventDefault();
+            passwordInput.setCustomValidity('Şifre en az 8 karakter olmalıdır');
+            passwordInput.reportValidity();
+            return;
+        }
+
+        // Şifre eşleşme kontrolü
+        if (passwordInput.value !== confirmPasswordInput.value) {
+            event.preventDefault();
+            confirmPasswordInput.setCustomValidity('Şifreler eşleşmiyor');
+            confirmPasswordInput.reportValidity();
+            return;
+        }
+
+        // Genel form doğrulaması
+        if (!this.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // İlk hatalı alana odaklan
+            const firstInvalidInput = this.querySelector(':invalid');
+            if (firstInvalidInput) {
+                firstInvalidInput.focus();
+
+                // Mobil cihazda scroll
+                if (window.innerWidth <= 768) {
+                    firstInvalidInput.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }
+            }
+        }
+
+        this.classList.add('was-validated');
+    });
+
+    // Mobil optimizasyonu
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            // Form elemanlarını büyüt
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.add('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.add('input-group-text-lg');
+            });
+        } else {
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.remove('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.remove('input-group-text-lg');
+            });
+        }
+    }
+
+    // Mobil optimizasyonunu başlat
+    optimizeForMobile();
+    window.addEventListener('resize', optimizeForMobile);
+});
+</script>
 {% endblock %}

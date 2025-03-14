@@ -5,39 +5,98 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <h2 class="border-bottom pb-2"><i class="fas fa-user-cog me-2"></i>Kullanıcılar</h2>
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-user-cog me-2"></i>Kullanıcı Yönetimi
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.add_user') }}" class="btn btn-success">
+                    <i class="fas fa-user-plus me-1"></i><span class="d-none d-md-inline-block">Yeni Kullanıcı</span>
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- Filtreleme ve Arama -->
 <div class="row mb-4">
-    <div class="col-md-12 text-end">
-        <a href="{{ url_for('main.add_user') }}" class="btn btn-success">
-            <i class="fas fa-user-plus me-1"></i>Yeni Kullanıcı
-        </a>
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4 col-sm-6">
+                        <label for="role-filter" class="form-label">Rol Filtresi</label>
+                        <select id="role-filter" class="form-select">
+                            <option value="all" selected>Tüm Roller</option>
+                            <option value="staff">Görevli</option>
+                            <option value="manager">Yönetici</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <label for="date-filter" class="form-label">Tarih Filtresi</label>
+                        <select id="date-filter" class="form-select">
+                            <option value="all" selected>Tüm Zamanlar</option>
+                            <option value="today">Bugün Oluşturulanlar</option>
+                            <option value="week">Son 7 Gün</option>
+                            <option value="month">Son Ay</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 col-sm-12">
+                        <label for="search-input" class="form-label">Arama</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" id="search-input" class="form-control" placeholder="Kullanıcı adı ara...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- Kullanıcı Listesi -->
 <div class="row">
     <div class="col-12">
         <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Kullanıcı Listesi</h5>
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Kullanıcı Listesi
+                </h5>
+                <div class="d-flex align-items-center">
+                    <span id="user-count" class="badge bg-light text-dark me-2">
+                        {{ users|length }} Kullanıcı
+                    </span>
+                    <div class="btn-group" role="group">
+                        <button id="btn-table-view" class="btn btn-sm btn-outline-light active">
+                            <i class="fas fa-table"></i>
+                        </button>
+                        <button id="btn-card-view" class="btn btn-sm btn-outline-light">
+                            <i class="fas fa-th"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="card-body p-0">
+
+            <!-- Tablo Görünümü -->
+            <div id="table-view" class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover table-striped mb-0">
+                    <table class="table table-hover table-striped mb-0" id="users-table">
                         <thead class="table-light">
                             <tr>
                                 <th>Kullanıcı Adı</th>
                                 <th>Rol</th>
                                 <th>Oluşturan</th>
                                 <th>Oluşturulma Tarihi</th>
-                                <th>İşlemler</th>
+                                <th class="text-end">İşlemler</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for user in users %}
-                            <tr>
+                            <tr data-username="{{ user.username }}"
+                                data-role="{{ user.role }}"
+                                data-created-by="{{ user.created_by.username if user.created_by else '' }}"
+                                data-created-at="{{ user.created_at.strftime('%Y-%m-%d') }}">
                                 <td>{{ user.username }}</td>
                                 <td>
                                     <span class="badge {% if user.is_admin %}bg-danger{% elif user.role == 'manager' %}bg-warning text-dark{% else %}bg-info{% endif %}">
@@ -45,53 +104,319 @@
                                     </span>
                                 </td>
                                 <td>{{ user.created_by.username if user.created_by else "-" }}</td>
-                                <td>{{ user.created_at.strftime('%d-%m-%Y %H:%M') if user.created_at else "-" }}</td>
-                                <td>
-                                    <a href="{{ url_for('main.user_operations', user_id=user.id) }}" class="btn btn-sm btn-info">
-                                        <i class="fas fa-history"></i> İşlemler
-                                    </a>
-                                    <a href="{{ url_for('main.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-edit"></i> Düzenle
-                                    </a>
-                                    {% if current_user.is_admin or (current_user.role == 'manager' and user.role == 'staff') %}
-                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ user.id }}">
-                                        <i class="fas fa-trash"></i> Sil
-                                    </button>
-
-                                    <!-- Silme Onay Modalı -->
-                                    <div class="modal fade" id="deleteModal{{ user.id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header bg-danger text-white">
-                                                    <h5 class="modal-title">Kullanıcı Silme Onayı</h5>
-                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <p>{{ user.username }} kullanıcısını silmek istediğinize emin misiniz?</p>
-                                                    <p class="text-danger">Bu işlem geri alınamaz!</p>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                                                    <form action="{{ url_for('main.delete_user', user_id=user.id) }}" method="post">
-                                                        <button type="submit" class="btn btn-danger">Sil</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
+                                <td>{{ user.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+                                <td class="text-end">
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('main.user_operations', user_id=user.id) }}"
+                                           class="btn btn-sm btn-info"
+                                           title="İşlemler">
+                                            <i class="fas fa-history"></i>
+                                        </a>
+                                        <a href="{{ url_for('main.edit_user', user_id=user.id) }}"
+                                           class="btn btn-sm btn-primary"
+                                           title="Düzenle">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if current_user.is_admin or (current_user.role == 'manager' and user.role == 'staff') %}
+                                        <button class="btn btn-sm btn-danger delete-user"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteUserModal{{ user.id }}"
+                                                title="Sil">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
                                 </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="5" class="text-center">Kullanıcı bulunamadı</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            <!-- Kart Görünümü -->
+            <div id="card-view" class="card-body row g-3 d-none">
+                {% for user in users %}
+                <div class="col-lg-4 col-md-6 col-sm-12 user-card-item"
+                     data-username="{{ user.username }}"
+                     data-role="{{ user.role }}"
+                     data-created-by="{{ user.created_by.username if user.created_by else '' }}"
+                     data-created-at="{{ user.created_at.strftime('%Y-%m-%d') }}">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="user-icon">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span class="badge {% if user.is_admin %}bg-danger{% elif user.role == 'manager' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                                    {% if user.is_admin %}Admin{% elif user.role == 'manager' %}Yönetici{% else %}Görevli{% endif %}
+                                </span>
+                            </div>
+                            <h5 class="card-title mb-2">{{ user.username }}</h5>
+                            <div class="card-text">
+                                <p class="mb-1">
+                                    <i class="fas fa-calendar-alt me-2 text-muted"></i>
+                                    {{ user.created_at.strftime('%d-%m-%Y %H:%M') }}
+                                </p>
+                                <p class="mb-3">
+                                    <i class="fas fa-user-plus me-2 text-muted"></i>
+                                    {{ user.created_by.username if user.created_by else "-" }}
+                                </p>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('main.user_operations', user_id=user.id) }}"
+                                   class="btn btn-sm btn-info">
+                                    <i class="fas fa-history me-1"></i>İşlemler
+                                </a>
+                                <a href="{{ url_for('main.edit_user', user_id=user.id) }}"
+                                   class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit me-1"></i>Düzenle
+                                </a>
+                                {% if current_user.is_admin or (current_user.role == 'manager' and user.role == 'staff') %}
+                                <button class="btn btn-sm btn-danger delete-user"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteUserModal{{ user.id }}">
+                                    <i class="fas fa-trash me-1"></i>Sil
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Silme Onay Modalları -->
+{% for user in users %}
+{% if current_user.is_admin or (current_user.role == 'manager' and user.role == 'staff') %}
+<div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Kullanıcı Silme Onayı</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    <strong>{{ user.username }}</strong> kullanıcısını silmek istediğinize emin misiniz?
+                </p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Bu işlem geri alınamaz!
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <form action="{{ url_for('main.delete_user', user_id=user.id) }}" method="post">
+                    <button type="submit" class="btn btn-danger">Sil</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtreleme ve arama değişkenleri
+    const roleFilter = document.getElementById('role-filter');
+    const dateFilter = document.getElementById('date-filter');
+    const searchInput = document.getElementById('search-input');
+    const userTable = document.getElementById('users-table');
+    const userCount = document.getElementById('user-count');
+
+    // Görünüm değişimi
+    const tableViewBtn = document.getElementById('btn-table-view');
+    const cardViewBtn = document.getElementById('btn-card-view');
+    const tableView = document.getElementById('table-view');
+    const cardView = document.getElementById('card-view');
+
+    // Görünüm değiştirme
+    tableViewBtn.addEventListener('click', function() {
+        tableViewBtn.classList.add('active');
+        cardViewBtn.classList.remove('active');
+        tableView.classList.remove('d-none');
+        cardView.classList.add('d-none');
+        localStorage.setItem('userViewPreference', 'table');
+    });
+
+    cardViewBtn.addEventListener('click', function() {
+        cardViewBtn.classList.add('active');
+        tableViewBtn.classList.remove('active');
+        cardView.classList.remove('d-none');
+        tableView.classList.add('d-none');
+        localStorage.setItem('userViewPreference', 'card');
+    });
+
+    // Önceki görünüm tercihini hatırla
+    const savedViewPreference = localStorage.getItem('userViewPreference');
+    if (savedViewPreference === 'card') {
+        cardViewBtn.click();
+    }
+
+    // Filtreleme fonksiyonu
+    function filterUsers() {
+        const roleValue = roleFilter.value;
+        const dateValue = dateFilter.value;
+        const searchTerm = searchInput.value.toLowerCase();
+        const today = new Date();
+        let visibleCount = 0;
+
+        // Tablo ve kart görünümleri için ayrı seçiciler
+        const tableRows = document.querySelectorAll('#table-view tbody tr');
+        const cardItems = document.querySelectorAll('#card-view .user-card-item');
+
+        // Birleşik kullanım için fonksiyon
+        function checkVisibility(element) {
+            const username = element.getAttribute('data-username').toLowerCase();
+            const role = element.getAttribute('data-role');
+            const createdBy = element.getAttribute('data-created-by').toLowerCase();
+            const createdAt = new Date(element.getAttribute('data-created-at'));
+
+            // Rol filtresi
+            const roleMatch = roleValue === 'all' || role === roleValue ||
+                (roleValue === 'admin' && element.querySelector('.badge').textContent === 'Admin');
+
+            // Tarih filtresi
+            let dateMatch = true;
+            switch(dateValue) {
+                case 'today':
+                    dateMatch = createdAt.toDateString() === today.toDateString();
+                    break;
+                case 'week':
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(today.getDate() - 7);
+                    dateMatch = createdAt >= weekAgo;
+                    break;
+                case 'month':
+                    const monthAgo = new Date(today);
+                    monthAgo.setMonth(today.getMonth() - 1);
+                    dateMatch = createdAt >= monthAgo;
+                    break;
+            }
+
+            // Arama filtresi
+            const searchMatch = searchTerm === '' ||
+                username.includes(searchTerm) ||
+                createdBy.includes(searchTerm) ||
+                (element.querySelector('.badge').textContent.toLowerCase().includes(searchTerm));
+
+            // Tüm filtreleri uygula
+            const isVisible = roleMatch && dateMatch && searchMatch;
+
+            if (isVisible) {
+                element.style.display = '';
+                visibleCount++;
+            } else {
+                element.style.display = 'none';
+            }
+
+            return isVisible;
+        }
+
+        // Tablo ve kart görünümü için ayrı filtreleme
+        tableRows.forEach(checkVisibility);
+        cardItems.forEach(checkVisibility);
+
+        // Kullanıcı sayısını güncelle
+        userCount.textContent = `${visibleCount} Kullanıcı`;
+
+        // Eğer hiç sonuç yoksa bilgilendirme mesajı göster
+        const noResultsTableRow = document.querySelector('#table-view tbody .no-results-row');
+        const noResultsCardMessage = document.querySelector('#card-view .no-results-message');
+
+        if (visibleCount === 0) {
+            // Tablo görünümü için
+            if (!noResultsTableRow) {
+                const tbody = document.querySelector('#table-view tbody');
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.className = 'no-results-row';
+                noResultsRow.innerHTML = `
+                    <td colspan="5" class="text-center py-4">
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Filtreleme kriterlerine uygun kullanıcı bulunamadı
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(noResultsRow);
+            }
+
+            // Kart görünümü için
+            if (!noResultsCardMessage) {
+                const cardViewContainer = document.getElementById('card-view');
+                const noResultsDiv = document.createElement('div');
+                noResultsDiv.className = 'col-12 no-results-message';
+                noResultsDiv.innerHTML = `
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i>Filtreleme kriterlerine uygun kullanıcı bulunamadı
+                    </div>
+                `;
+                cardViewContainer.appendChild(noResultsDiv);
+            }
+        } else {
+            // Sonuç varsa "Sonuç bulunamadı" mesajlarını kaldır
+            if (noResultsTableRow) {
+                noResultsTableRow.remove();
+            }
+            if (noResultsCardMessage) {
+                noResultsCardMessage.remove();
+            }
+        }
+    }
+
+    // Filtreleme olayları
+    roleFilter.addEventListener('change', filterUsers);
+    dateFilter.addEventListener('change', filterUsers);
+    searchInput.addEventListener('input', filterUsers);
+
+    // Mobil optimizasyon
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            // Form elemanlarını büyüt
+            document.querySelectorAll('.form-select, .form-control').forEach(el => {
+                el.classList.add('form-control-lg');
+            });
+
+            // Mobil cihazlarda satırlara tıklanabilirlik ekle
+            const tableRows = document.querySelectorAll('#table-view tbody tr');
+            tableRows.forEach(row => {
+                row.classList.add('cursor-pointer');
+                row.addEventListener('click', function(e) {
+                    // Eğer tıklanan eleman bir buton değilse
+                    if (!e.target.closest('button, a')) {
+                        const editLink = this.querySelector('a.btn-primary');
+                        if (editLink) {
+                            window.location.href = editLink.href;
+                        }
+                    }
+                });
+            });
+        } else {
+            // Mobil optimize sınıflarını kaldır
+            document.querySelectorAll('.form-select, .form-control').forEach(el => {
+                el.classList.remove('form-control-lg');
+            });
+
+            const tableRows = document.querySelectorAll('#table-view tbody tr');
+            tableRows.forEach(row => {
+                row.classList.remove('cursor-pointer');
+                row.removeEventListener('click', function() {});
+            });
+        }
+    }
+
+    // İlk filtreleme ve optimizasyon
+    filterUsers();
+    optimizeForMobile();
+
+    // Pencere boyutu değiştiğinde optimizasyonu yeniden uygula
+    window.addEventListener('resize', optimizeForMobile);
+});
+</script>
 {% endblock %}

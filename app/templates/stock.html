@@ -5,67 +5,99 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <h2 class="border-bottom pb-2"><i class="fas fa-chart-bar me-2"></i>Stok Durumu</h2>
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-chart-bar me-2"></i>Stok Durumu
+            </h2>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneline Dön</span>
+            </a>
+        </div>
     </div>
 </div>
 
+<!-- Filtreleme ve Kontrol Kartı -->
 <div class="row mb-4">
-    <div class="col-md-12">
+    <div class="col-12">
         <div class="card shadow">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-gem me-2"></i>Ayarlar ve Bölgeler</h5>
-                <button type="button" id="btn-refresh" class="btn btn-sm btn-outline-light">
-                    <i class="fas fa-sync-alt me-1"></i>Yenile
-                </button>
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>Stok Filtreleme
+                </h5>
+                <div class="d-flex align-items-center">
+                    <button id="btn-refresh" class="btn btn-sm btn-light me-2" title="Stoku Yenile">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button id="btn-export" class="btn btn-sm btn-light" title="Excel'e Aktar">
+                        <i class="fas fa-file-excel"></i>
+                    </button>
+                </div>
             </div>
             <div class="card-body">
-                <!-- Ayar seçimi ve filtreleme -->
-                <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="setting-filter" class="form-label">Ayar Filtresi</label>
-                            <select id="setting-filter" class="form-select">
-                                <option value="all" selected>Tüm Ayarlar</option>
-                                {% for setting in settings %}
-                                <option value="{{ setting }}">{{ setting }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                <div class="row g-3">
+                    <div class="col-md-4 col-sm-6">
+                        <label for="setting-filter" class="form-label">Ayar Filtresi</label>
+                        <select id="setting-filter" class="form-select">
+                            <option value="all" selected>Tüm Ayarlar</option>
+                            {% for setting in settings %}
+                            <option value="{{ setting }}">{{ setting }} Ayar</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="region-filter" class="form-label">Bölge Filtresi</label>
-                            <select id="region-filter" class="form-select">
-                                <option value="all" selected>Tüm Bölgeler</option>
-                                {% for region in regions %}
-                                <option value="{{ region.name }}">{{ region.name_tr }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                    <div class="col-md-4 col-sm-6">
+                        <label for="region-filter" class="form-label">Bölge Filtresi</label>
+                        <select id="region-filter" class="form-select">
+                            <option value="all" selected>Tüm Bölgeler</option>
+                            {% for region in regions %}
+                            <option value="{{ region.name }}">{{ region.name_tr|capitalize }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="min-gram" class="form-label">Minimum Gram</label>
+                    <div class="col-md-4 col-sm-12">
+                        <label for="min-gram" class="form-label">Minimum Gram</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-weight-hanging"></i></span>
                             <input type="number" id="min-gram" class="form-control" min="0" step="0.01" value="0">
+                            <span class="input-group-text">g</span>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-                <!-- Stok durumu tablosu -->
+<!-- Stok Durumu Kartı -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-boxes me-2"></i>Detaylı Stok Durumu
+                </h5>
+                <span id="stock-count" class="badge bg-light text-dark">{{ stock_data|length }} Kayıt</span>
+            </div>
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover table-striped" id="stock-table">
+                    <table class="table table-hover table-striped mb-0" id="stock-table">
                         <thead class="table-light">
                             <tr>
                                 <th>Bölge</th>
                                 <th>Ayar</th>
                                 <th>Gram</th>
                                 <th>Durum</th>
+                                <th class="text-end">Detay</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for item in stock_data %}
                             <tr data-region="{{ item.region_en }}" data-setting="{{ item.setting }}" data-gram="{{ item.gram }}">
-                                <td>{{ item.region }}</td>
+                                <td>
+                                    <span class="badge bg-secondary me-2">
+                                        <i class="fas {% if item.region_en == 'safe' %}fa-vault{% elif item.region_en == 'table' %}fa-table{% elif item.region_en == 'polish' %}fa-brush{% elif item.region_en == 'melting' %}fa-fire{% elif item.region_en == 'saw' %}fa-cut{% elif item.region_en == 'acid' %}fa-flask{% else %}fa-box{% endif %}"></i>
+                                    </span>
+                                    {{ item.region }}
+                                </td>
                                 <td>{{ item.setting }}</td>
                                 <td>{{ item.gram }}</td>
                                 <td>
@@ -74,6 +106,14 @@
                                     {% else %}
                                     <span class="badge bg-secondary">Boş</span>
                                     {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-info show-details"
+                                            data-region="{{ item.region }}"
+                                            data-setting="{{ item.setting }}"
+                                            data-gram="{{ item.gram }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -88,28 +128,30 @@
 <!-- Toplam Stok Özeti -->
 <div class="row">
     <div class="col-md-6 mb-4">
-        <div class="card shadow">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Toplam Stok Özeti</h5>
+        <div class="card shadow h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-calculator me-2"></i>Toplam Stok Özeti
+                </h5>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover mb-0" id="summary-table">
                         <thead class="table-light">
                             <tr>
                                 <th>Ayar</th>
                                 <th>Toplam Gram</th>
                                 <th>Milyem</th>
-                                <th>Has Karşılığı (g)</th>
+                                <th>Has Karşılığı</th>
                             </tr>
                         </thead>
-                        <tbody id="summary-table">
+                        <tbody>
                             {% for setting, data in totals.items() %}
                             <tr>
                                 <td>{{ setting }}</td>
                                 <td>{{ data.total|float|round(2) }}</td>
                                 <td>{{ data.purity }}</td>
-                                <td>{{ (data.total|float * data.purity|float / 1000)|round(4) }}</td>
+                                <td>{{ (data.total|float * data.purity|float / 1000)|round(4) }} g</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -120,13 +162,51 @@
     </div>
 
     <div class="col-md-6 mb-4">
-        <div class="card shadow">
+        <div class="card shadow h-100">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-coins me-2"></i>Toplam Has Değer</h5>
+                <h5 class="mb-0">
+                    <i class="fas fa-coins me-2"></i>Toplam Has Değer
+                </h5>
             </div>
             <div class="card-body text-center">
-                <h3 class="mb-3">Toplam Has Altın: <span id="total-pure-gold">{{ total_pure_gold|round(4) }}</span> g</h3>
-                <p class="text-muted">Bu değer tüm ayarlara göre hesaplanmış has altın karşılığıdır.</p>
+                <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                    <h2 class="mb-3 text-dark">
+                        <span id="total-pure-gold">{{ total_pure_gold|round(4) }}</span> g
+                    </h2>
+                    <p class="text-muted text-center">
+                        <i class="fas fa-info-circle me-2"></i>Tüm ayarların toplam has altın karşılığı
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detay Modal -->
+<div class="modal fade" id="stockDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Stok Detayları</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Bölge:</dt>
+                    <dd class="col-sm-8" id="modal-region"></dd>
+
+                    <dt class="col-sm-4">Ayar:</dt>
+                    <dd class="col-sm-8" id="modal-setting"></dd>
+
+                    <dt class="col-sm-4">Gram:</dt>
+                    <dd class="col-sm-8" id="modal-gram"></dd>
+
+                    <dt class="col-sm-4">Durum:</dt>
+                    <dd class="col-sm-8" id="modal-status"></dd>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
             </div>
         </div>
     </div>
@@ -141,6 +221,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const minGramFilter = document.getElementById('min-gram');
     const stockTable = document.getElementById('stock-table');
     const refreshButton = document.getElementById('btn-refresh');
+    const exportButton = document.getElementById('btn-export');
+    const stockDetailModal = new bootstrap.Modal(document.getElementById('stockDetailModal'));
+
+    // Detay gösterme
+    document.querySelectorAll('.show-details').forEach(button => {
+        button.addEventListener('click', function() {
+            const region = this.getAttribute('data-region');
+            const setting = this.getAttribute('data-setting');
+            const gram = this.getAttribute('data-gram');
+
+            document.getElementById('modal-region').textContent = region;
+            document.getElementById('modal-setting').textContent = setting;
+            document.getElementById('modal-gram').textContent = gram + ' g';
+
+            const statusElement = document.getElementById('modal-status');
+            statusElement.innerHTML = parseFloat(gram) > 0
+                ? '<span class="badge bg-success">Mevcut</span>'
+                : '<span class="badge bg-secondary">Boş</span>';
+
+            stockDetailModal.show();
+        });
+    });
 
     // Tabloda filtreleme fonksiyonu
     function filterTable() {
@@ -149,6 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const minGram = parseFloat(minGramFilter.value) || 0;
 
         const rows = stockTable.querySelectorAll('tbody tr');
+        let visibleCount = 0;
 
         rows.forEach(row => {
             const rowSetting = row.getAttribute('data-setting');
@@ -161,10 +264,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (settingMatch && regionMatch && gramMatch) {
                 row.style.display = '';
+                visibleCount++;
             } else {
                 row.style.display = 'none';
             }
         });
+
+        // Kayıt sayısını güncelle
+        document.getElementById('stock-count').textContent = `${visibleCount} Kayıt`;
     }
 
     // Filtre değişikliklerini dinle
@@ -177,39 +284,68 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.reload();
     });
 
-    // Sayfayı belirli aralıklarla otomatik yenile
-    let autoRefreshInterval = setInterval(() => {
-        fetch(window.location.href)
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
+    // Excel'e aktarma
+    exportButton.addEventListener('click', function() {
+        const table = document.getElementById('stock-table');
+        const rows = table.querySelectorAll('tbody tr:not([style*="display: none"])');
 
-                // Tabloyu güncelle
-                const newTable = doc.getElementById('stock-table').querySelector('tbody');
-                const oldTable = stockTable.querySelector('tbody');
-                oldTable.innerHTML = newTable.innerHTML;
+        if (rows.length === 0) {
+            alert('Aktarılacak veri bulunamadı!');
+            return;
+        }
 
-                // Özet tablosunu güncelle
-                const newSummary = doc.getElementById('summary-table');
-                const oldSummary = document.getElementById('summary-table');
-                oldSummary.innerHTML = newSummary.innerHTML;
+        let csvContent = "Bölge,Ayar,Gram,Durum\n";
 
-                // Toplam has değeri güncelle
-                const newTotalPureGold = doc.getElementById('total-pure-gold');
-                const oldTotalPureGold = document.getElementById('total-pure-gold');
-                oldTotalPureGold.textContent = newTotalPureGold.textContent;
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            const region = cells[0].textContent.trim();
+            const setting = cells[1].textContent.trim();
+            const gram = cells[2].textContent.trim();
+            const status = cells[3].textContent.trim();
 
-                // Filtreleri uygula
-                filterTable();
-            })
-            .catch(error => console.error('Yenileme hatası:', error));
-    }, 60000); // 60 saniyede bir yenile
+            csvContent += `"${region}","${setting}","${gram}","${status}"\n`;
+        });
 
-    // Sayfa ayrıldığında interval'ı temizle
-    window.addEventListener('beforeunload', () => {
-        clearInterval(autoRefreshInterval);
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `stok_raporu_${new Date().toISOString().slice(0,10)}.csv`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     });
+
+    // Sayfa yüklendiğinde ilk filtrelemeyi yap
+    filterTable();
+
+    // Mobil optimizasyon
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            // Form elemanlarını büyüt
+            document.querySelectorAll('.form-select, .form-control').forEach(el => {
+                el.classList.add('form-control-lg');
+            });
+
+            // Tablo görünümünü mobil uyumlu hale getir
+            stockTable.classList.add('table-mobile');
+        } else {
+document.querySelectorAll('.form-select, .form-control').forEach(el => {
+                el.classList.remove('form-control-lg');
+            });
+
+            stockTable.classList.remove('table-mobile');
+        }
+    }
+
+    // İlk mobil optimizasyonu uygula
+    optimizeForMobile();
+
+    // Pencere boyutu değiştiğinde tekrar optimize et
+    window.addEventListener('resize', optimizeForMobile);
 });
 </script>
 {% endblock %}

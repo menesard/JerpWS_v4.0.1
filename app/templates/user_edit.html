@@ -5,21 +5,39 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <h2 class="border-bottom pb-2"><i class="fas fa-user-edit me-2"></i>Kullanıcı Düzenle</h2>
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-user-edit me-2"></i>Kullanıcı Düzenleme
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.users') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Kullanıcılara Dön</span>
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-lg-8 col-md-10">
         <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-user-edit me-2"></i>{{ user.username }} Kullanıcı Bilgileri</h5>
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-cog me-2"></i>{{ user.username }} Kullanıcı Bilgileri
+                </h5>
+                {% if user.id == current_user.id %}
+                <span class="badge bg-warning text-dark">Kendi Profiliniz</span>
+                {% endif %}
             </div>
             <div class="card-body">
-                <form method="post" class="needs-validation" novalidate>
+                <form method="post" class="needs-validation" novalidate id="userEditForm">
                     <div class="mb-3">
                         <label for="username" class="form-label">Kullanıcı Adı</label>
-                        <input type="text" class="form-control" id="username" value="{{ user.username }}" disabled>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control" id="username"
+                                   value="{{ user.username }}" disabled>
+                        </div>
                         <div class="form-text">
                             Kullanıcı adı değiştirilemez.
                         </div>
@@ -27,28 +45,74 @@
 
                     <div class="mb-3">
                         <label for="password" class="form-label">Yeni Şifre</label>
-                        <input type="password" class="form-control" id="password" name="password">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control"
+                                   id="password" name="password">
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
                         <div class="form-text">
-                            Şifre değiştirmek istemiyorsanız boş bırakın.
+                            Şifre değiştirmek istemiyorsanız boş bırakın. En az 8 karakter olmalıdır.
                         </div>
                     </div>
 
                     {% if current_user.id != user.id and (current_user.is_admin or (current_user.role == 'manager' and user.role == 'staff')) %}
                     <div class="mb-3">
                         <label for="role" class="form-label">Kullanıcı Rolü</label>
-                        <select class="form-select" id="role" name="role">
-                            <option value="staff" {% if user.role == 'staff' %}selected{% endif %}>Görevli</option>
-                            <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>Yönetici</option>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+                            <select class="form-select" id="role" name="role">
+                                <option value="staff"
+                                        {% if user.role == 'staff' %}selected{% endif %}>
+                                    Görevli
+                                </option>
+                                <option value="manager"
+                                        {% if user.role == 'manager' %}selected{% endif %}>
+                                    Yönetici
+                                </option>
+                                {% if current_user.is_admin %}
+                                <option value="admin"
+                                        {% if user.is_admin %}selected{% endif %}>
+                                    Admin
+                                </option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="form-text">
+                            <strong>Görevli:</strong> Temel işlemler yapabilir.<br>
+                            <strong>Yönetici:</strong> Kullanıcı ve müşteri işlemleri yapabilir.<br>
                             {% if current_user.is_admin %}
-                            <option value="admin" {% if user.is_admin %}selected{% endif %}>Admin</option>
+                            <strong>Admin:</strong> Tüm sistem yetkilerine sahiptir.
                             {% endif %}
-                        </select>
+                        </div>
                     </div>
                     {% endif %}
 
+                    <!-- Ek Bilgiler -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-info-circle me-2"></i>Kullanıcı Detayları
+                            </h6>
+                            <dl class="row">
+                                <dt class="col-sm-4">Oluşturulma Tarihi:</dt>
+                                <dd class="col-sm-8">
+                                    {{ user.created_at.strftime('%d-%m-%Y %H:%M') }}
+                                </dd>
+
+                                <dt class="col-sm-4">Oluşturan:</dt>
+                                <dd class="col-sm-8">
+                                    {{ user.created_by.username if user.created_by else '-' }}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
                     <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('main.users') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-1"></i>Geri
+                        <a href="{{ url_for('main.users') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>İptal
                         </a>
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save me-1"></i>Değişiklikleri Kaydet
@@ -59,4 +123,93 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Şifre görünürlüğü toggle fonksiyonu
+    const passwordInput = document.getElementById('password');
+    const togglePasswordButton = document.getElementById('togglePassword');
+
+    if (togglePasswordButton && passwordInput) {
+        togglePasswordButton.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            // İkon değişimi
+            const icon = this.querySelector('i');
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        });
+    }
+
+    // Form doğrulama
+    const userEditForm = document.getElementById('userEditForm');
+
+    userEditForm.addEventListener('submit', function(event) {
+        const passwordInput = document.getElementById('password');
+
+        // Şifre girilmişse uzunluk kontrolü
+        if (passwordInput.value.trim() !== '') {
+            if (passwordInput.value.length < 8) {
+                event.preventDefault();
+                passwordInput.setCustomValidity('Şifre en az 8 karakter olmalıdır');
+                passwordInput.reportValidity();
+                return;
+            } else {
+                passwordInput.setCustomValidity('');
+            }
+        }
+
+        // Genel form doğrulaması
+        if (!this.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // İlk hatalı alana odaklan
+            const firstInvalidInput = this.querySelector(':invalid');
+            if (firstInvalidInput) {
+                firstInvalidInput.focus();
+
+                // Mobil cihazda scroll
+                if (window.innerWidth <= 768) {
+                    firstInvalidInput.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }
+            }
+        }
+
+        this.classList.add('was-validated');
+    });
+
+    // Mobil optimizasyonu
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            // Form elemanlarını büyüt
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.add('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.add('input-group-text-lg');
+            });
+        } else {
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.remove('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.remove('input-group-text-lg');
+            });
+        }
+    }
+
+    // Mobil optimizasyonunu başlat
+    optimizeForMobile();
+    window.addEventListener('resize', optimizeForMobile);
+});
+</script>
 {% endblock %}

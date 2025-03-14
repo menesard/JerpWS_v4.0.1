@@ -5,53 +5,128 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <div class="d-flex justify-content-between align-items-center">
-            <h2 class="border-bottom pb-2">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
                 <i class="fas fa-history me-2"></i>{{ user.username }} Kullanıcı İşlemleri
             </h2>
-            <a href="{{ url_for('main.users') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i>Kullanıcılara Dön
-            </a>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.users') }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Kullanıcılara Dön</span>
+                </a>
+                <a href="{{ url_for('main.user_edit', user_id=user.id) }}" class="btn btn-primary">
+                    <i class="fas fa-user-edit me-1"></i><span class="d-none d-md-inline-block">Kullanıcıyı Düzenle</span>
+                </a>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- Kullanıcı Profil Kartı -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-circle me-2"></i>Kullanıcı Profili
+                </h5>
+                <span class="badge {% if user.is_admin %}bg-danger{% elif user.role == 'manager' %}bg-warning text-dark{% else %}bg-primary{% endif %}">
+                    {% if user.is_admin %}Admin{% elif user.role == 'manager' %}Yönetici{% else %}Görevli{% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Kullanıcı Adı:</dt>
+                            <dd class="col-sm-7">{{ user.username }}</dd>
+
+                            <dt class="col-sm-5">Rol:</dt>
+                            <dd class="col-sm-7">
+                                {% if user.is_admin %}Admin{% elif user.role == 'manager' %}Yönetici{% else %}Görevli{% endif %}
+                            </dd>
+
+                            <dt class="col-sm-5">Oluşturulma Tarihi:</dt>
+                            <dd class="col-sm-7">{{ user.created_at.strftime('%d-%m-%Y %H:%M') }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Oluşturan:</dt>
+                            <dd class="col-sm-7">{{ user.created_by.username if user.created_by else '-' }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İşlem Kayıtları -->
 <div class="row">
     <div class="col-12">
         <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-list-alt me-2"></i>Son 20 İşlem</h5>
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-alt me-2"></i>Son 20 İşlem
+                </h5>
+                <div class="d-flex align-items-center">
+                    <input type="text" class="form-control form-control-sm me-2"
+                           id="table-search"
+                           placeholder="Arama..."
+                           style="width: 150px;">
+                    <button id="btn-export" class="btn btn-sm btn-light" title="Excel'e Aktar">
+                        <i class="fas fa-file-excel"></i>
+                    </button>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover table-striped mb-0">
+                    <table class="table table-hover table-striped mb-0 table-sortable" id="operations-table">
                         <thead class="table-light">
                             <tr>
-                                <th>Zaman</th>
+                                <th class="sortable" data-sort="date">Zaman <i class="fas fa-sort"></i></th>
                                 <th>İşlem</th>
-                                <th>Kaynak</th>
-                                <th>Hedef</th>
-                                <th>Ayar</th>
-                                <th>Gram</th>
+                                <th class="sortable" data-sort="source">Kaynak <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="target">Hedef <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="setting">Ayar <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="gram">Gram <i class="fas fa-sort"></i></th>
+                                <th>Detay</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for operation in operations %}
                             <tr>
-                                <td>{{ operation.timestamp.strftime('%d-%m-%Y %H:%M:%S') }}</td>
-                                <td>
+                                <td data-label="Zaman">{{ operation.timestamp.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                                <td data-label="İşlem">
                                     <span class="badge {% if operation.operation_type == 'ADD' %}bg-success{% else %}bg-danger{% endif %}">
                                         {{ 'EKLEME' if operation.operation_type == 'ADD' else 'ÇIKARMA' }}
                                     </span>
                                 </td>
-                                <td>{{ operation.source_region.name if operation.source_region else "-" }}</td>
-                                <td>{{ operation.target_region.name if operation.target_region else "-" }}</td>
-                                <td>{{ operation.setting.name }}</td>
-                                <td>{{ operation.gram }}</td>
+                                <td data-label="Kaynak">{{ operation.source_region.name if operation.source_region else "-" }}</td>
+                                <td data-label="Hedef">{{ operation.target_region.name if operation.target_region else "-" }}</td>
+                                <td data-label="Ayar">{{ operation.setting.name }}</td>
+                                <td data-label="Gram">{{ operation.gram }}</td>
+                                <td data-label="Detay">
+                                    <button class="btn btn-sm btn-info show-details"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#operationDetailModal"
+                                            data-time="{{ operation.timestamp.strftime('%d-%m-%Y %H:%M:%S') }}"
+                                            data-operation="{{ 'Ekleme' if operation.operation_type == 'ADD' else 'Çıkarma' }}"
+                                            data-source="{{ operation.source_region.name if operation.source_region else '-' }}"
+                                            data-target="{{ operation.target_region.name if operation.target_region else '-' }}"
+                                            data-setting="{{ operation.setting.name }}"
+                                            data-gram="{{ operation.gram }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center">Bu kullanıcı henüz işlem yapmamış</td>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Bu kullanıcı henüz işlem yapmamış
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -61,4 +136,252 @@
         </div>
     </div>
 </div>
+
+<!-- İşlem Detay Modalı -->
+<div class="modal fade" id="operationDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">İşlem Detayları</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Zaman:</dt>
+                    <dd class="col-sm-8" id="modal-time"></dd>
+
+                    <dt class="col-sm-4">İşlem:</dt>
+                    <dd class="col-sm-8" id="modal-operation"></dd>
+
+                    <dt class="col-sm-4">Kaynak:</dt>
+                    <dd class="col-sm-8" id="modal-source"></dd>
+
+                    <dt class="col-sm-4">Hedef:</dt>
+                    <dd class="col-sm-8" id="modal-target"></dd>
+
+                    <dt class="col-sm-4">Ayar:</dt>
+                    <dd class="col-sm-8" id="modal-setting"></dd>
+
+                    <dt class="col-sm-4">Gram:</dt>
+                    <dd class="col-sm-8" id="modal-gram"></dd>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Detay gösterme
+    const detailButtons = document.querySelectorAll('.show-details');
+    detailButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            document.getElementById('modal-time').textContent = this.getAttribute('data-time');
+            document.getElementById('modal-operation').textContent = this.getAttribute('data-operation');
+            document.getElementById('modal-source').textContent = this.getAttribute('data-source');
+            document.getElementById('modal-target').textContent = this.getAttribute('data-target');
+            document.getElementById('modal-setting').textContent = this.getAttribute('data-setting');
+            document.getElementById('modal-gram').textContent = this.getAttribute('data-gram');
+        });
+    });
+
+    // Arama fonksiyonu
+    const searchInput = document.getElementById('table-search');
+    const table = document.getElementById('operations-table');
+
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const rows = table.querySelectorAll('tbody tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            // Tüm hücre içeriklerini kontrol et
+            const rowText = row.textContent.toLowerCase();
+            const isVisible = rowText.includes(searchTerm);
+
+            row.style.display = isVisible ? '' : 'none';
+
+            if (isVisible) visibleCount++;
+        });
+
+        // Sonuç bulunamadı mesajı
+        const noResultsRow = table.querySelector('.no-results-row');
+        if (visibleCount === 0 && rows.length > 1) {
+            if (!noResultsRow) {
+                const tbody = table.querySelector('tbody');
+                const newRow = document.createElement('tr');
+                newRow.className = 'no-results-row';
+                newRow.innerHTML = `
+                    <td colspan="7" class="text-center py-4">
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Arama kriterlerine uygun sonuç bulunamadı
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(newRow);
+            }
+        } else if (noResultsRow) {
+            noResultsRow.remove();
+        }
+    });
+
+    // Excel'e aktarma
+    const exportButton = document.getElementById('btn-export');
+    exportButton.addEventListener('click', function() {
+        const table = document.getElementById('operations-table');
+        const rows = table.querySelectorAll('tbody tr:not(.no-results-row)');
+
+        if (rows.length === 0) {
+            alert('Aktarılacak veri bulunamadı!');
+            return;
+        }
+
+        let csvContent = "Zaman,İşlem,Kaynak,Hedef,Ayar,Gram\n";
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            const rowData = [
+                cells[0].textContent.trim(),
+                cells[1].textContent.trim(),
+                cells[2].textContent.trim(),
+                cells[3].textContent.trim(),
+                cells[4].textContent.trim(),
+                cells[5].textContent.trim()
+            ];
+
+            csvContent += rowData.map(cell => `"${cell}"`).join(',') + '\n';
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${user.username}_islemleri_${new Date().toISOString().slice(0,10)}.csv`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    // Sıralama fonksiyonu
+    const sortableHeaders = document.querySelectorAll('th.sortable');
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const sortType = this.getAttribute('data-sort');
+            const isAscending = this.classList.contains('asc');
+
+            // Tüm sıralama sınıflarını temizle
+            sortableHeaders.forEach(h => {
+                h.classList.remove('asc', 'desc');
+                h.querySelector('i').className = 'fas fa-sort';
+            });
+
+            // Yeni sıralama yönünü belirle
+            this.classList.add(isAscending ? 'desc' : 'asc');
+            this.querySelector('i').className = isAscending ? 'fas fa-sort-down' : 'fas fa-sort-up';
+
+            // Görünür satırları al
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'))
+                .filter(row => !row.classList.contains('no-results-row'));
+
+            // Sıralama işlemi
+            rows.sort((a, b) => {
+                const aValue = a.querySelector(`td:nth-child(${getSortColumnIndex(sortType)})`).textContent.trim();
+                const bValue = b.querySelector(`td:nth-child(${getSortColumnIndex(sortType)})`).textContent.trim();
+
+                // Sayısal ve tarih kontrolleri
+                if (sortType === 'date') {
+                    return isAscending
+                        ? new Date(bValue) - new Date(aValue)
+                        : new Date(aValue) - new Date(bValue);
+                } else if (sortType === 'gram' || sortType === 'setting') {
+                    // Sayısal değerler için
+                    const numA = parseFloat(aValue);
+                    const numB = parseFloat(bValue);
+
+                    // Sayısal kontrol
+                    if (!isNaN(numA) && !isNaN(numB)) {
+                        return isAscending
+                            ? numB - numA
+                            : numA - numB;
+                    }
+                }
+
+                // Metin karşılaştırması (diğer durumlar için)
+                return isAscending
+                    ? bValue.localeCompare(aValue, 'tr')
+                    : aValue.localeCompare(bValue, 'tr');
+            });
+
+            // Sıralanmış satırları tekrar DOM'a ekle
+            rows.forEach(row => tbody.appendChild(row));
+
+            // "Sonuç bulunamadı" satırını en sona ekle
+            const noResultsRow = tbody.querySelector('.no-results-row');
+            if (noResultsRow) {
+                tbody.appendChild(noResultsRow);
+            }
+        });
+    });
+
+    // Sütun indeksini alan yardımcı fonksiyon
+    function getSortColumnIndex(sortType) {
+        switch(sortType) {
+            case 'date': return 1;
+            case 'source': return 3;
+            case 'target': return 4;
+            case 'setting': return 5;
+            case 'gram': return 6;
+            default: return 1;
+        }
+    }
+
+    // Mobil optimizasyonu
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            // Tablo görünümünü mobil uyumlu hale getir
+            const table = document.getElementById('operations-table');
+            table.classList.add('table-mobile');
+
+            // Arama kutusunu daha büyük yap
+            const searchInput = document.getElementById('table-search');
+            searchInput.classList.add('form-control-lg');
+
+            // Satırlara tıklanabilirlik ekle
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                // Detay butonu olmayan satırları atla
+                const detailButton = row.querySelector('.show-details');
+                if (detailButton) {
+                    row.classList.add('cursor-pointer');
+                    row.addEventListener('click', function(e) {
+                        // Eğer tıklanan eleman zaten bir buton değilse
+                        if (!e.target.closest('button')) {
+                            detailButton.click();
+                        }
+                    });
+                }
+            });
+        } else {
+            const table = document.getElementById('operations-table');
+            table.classList.remove('table-mobile');
+
+            const searchInput = document.getElementById('table-search');
+            searchInput.classList.remove('form-control-lg');
+        }
+    }
+
+    // Mobil optimizasyonunu başlat
+    optimizeForMobile();
+    window.addEventListener('resize', optimizeForMobile);
+});
+</script>
 {% endblock %}

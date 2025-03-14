@@ -5,34 +5,63 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <h2 class="border-bottom pb-2"><i class="fas fa-cog me-2"></i>Ayarlar</h2>
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-cog me-2"></i>Sistem Ayarları
+            </h2>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneline Dön</span>
+            </a>
+        </div>
     </div>
 </div>
 
 <div class="row">
-    <!-- Şifre Değiştirme -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-lock me-2"></i>Şifre Değiştir</h5>
+    <!-- Şifre Değiştirme Kartı -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-lock me-2"></i>Şifre Değişikliği</h5>
+                <span class="badge bg-light text-dark">Güvenlik</span>
             </div>
             <div class="card-body">
-                <form method="post">
+                <form method="post" class="needs-validation" novalidate>
                     <input type="hidden" name="change_password" value="1">
 
                     <div class="mb-3">
                         <label for="old_password" class="form-label">Mevcut Şifre</label>
-                        <input type="password" class="form-control" id="old_password" name="old_password" required>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-key"></i></span>
+                            <input type="password" class="form-control" id="old_password" name="old_password" required>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleOldPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="new_password" class="form-label">Yeni Şifre</label>
-                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" id="new_password" name="new_password" required>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            Şifre en az 8 karakter uzunluğunda olmalıdır.
+                        </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="confirm_password" class="form-label">Yeni Şifre (Tekrar)</label>
-                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="d-grid">
@@ -45,43 +74,52 @@
         </div>
     </div>
 
-    <!-- Terazi Ayarları -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white">
+    <!-- Terazi Ayarları Kartı -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-weight me-2"></i>Terazi Ayarları</h5>
+                <span class="badge {% if scale_connected %}bg-success{% else %}bg-warning{% endif %}">
+                    {{ 'Bağlı' if scale_connected else 'Simülasyon' }}
+                </span>
             </div>
             <div class="card-body">
-                <div class="alert {% if scale_connected %}alert-success{% else %}alert-warning{% endif %} mb-3">
-                    <i class="fas {% if scale_connected %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %} me-2"></i>
-                    {% if scale_connected %}
-                        Terazi bağlantısı aktif.
-                    {% else %}
-                        Terazi bağlantısı yok, simülasyon modu aktif.
-                    {% endif %}
-                </div>
-
-                <form method="post">
+                <form method="post" class="needs-validation" novalidate>
                     <input type="hidden" name="scale_settings" value="1">
 
                     <div class="mb-3">
-                        <label for="scale_port" class="form-label">Seri Port</label>
-                        <input type="text" class="form-control" id="scale_port" name="scale_port" value="{{ scale_port }}" required>
+                        <label for="scale_port" class="form-label">Seri Port Bağlantısı</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-plug"></i></span>
+                            <input type="text" class="form-control" id="scale_port" name="scale_port" value="{{ scale_port }}" required>
+                        </div>
                         <div class="form-text">
-                            Terazinin bağlı olduğu seri port (örn. COM5, /dev/ttyUSB0)
+                            Terazinin bağlı olduğu port (örn. COM5, /dev/ttyUSB0)
                         </div>
                     </div>
 
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="simulation_mode" name="simulation_mode" {% if scale_simulation %}checked{% endif %}>
-                        <label class="form-check-label" for="simulation_mode">Simülasyon Modu</label>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="simulation_mode" name="simulation_mode"
+                                   {% if scale_simulation %}checked{% endif %}>
+                            <label class="form-check-label" for="simulation_mode">
+                                Simülasyon Modu
+                            </label>
+                        </div>
                         <div class="form-text">
-                            Gerçek terazi olmadığında rastgele değerler üretir.
+                            Gerçek terazi olmadığında rastgele değerler üretir
+                        </div>
+                    </div>
+
+                    <div class="alert {% if scale_connected %}alert-success{% else %}alert-warning{% endif %} d-flex align-items-center">
+                        <i class="fas {% if scale_connected %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %} me-2"></i>
+                        <div>
+                            {{ 'Terazi bağlantısı aktif' if scale_connected else 'Terazi bağlantısı yok, simülasyon modu aktif' }}
                         </div>
                     </div>
 
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-info">
                             <i class="fas fa-save me-2"></i>Ayarları Kaydet
                         </button>
                     </div>
@@ -93,44 +131,144 @@
 
 <!-- Sistem Bilgileri -->
 <div class="row">
-    <div class="col-12 mb-4">
+    <div class="col-12">
         <div class="card shadow">
-            <div class="card-header bg-info text-white">
+            <div class="card-header bg-secondary text-white">
                 <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Sistem Bilgileri</h5>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
-                        <dl class="row mb-0">
-                            <dt class="col-sm-4">Uygulama Sürümü:</dt>
-                            <dd class="col-sm-8">v1.0.0</dd>
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="card bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">
+                                    <i class="fas fa-desktop me-2"></i>Uygulama Detayları
+                                </h6>
+                                <dl class="row">
+                                    <dt class="col-sm-5">Uygulama Sürümü:</dt>
+                                    <dd class="col-sm-7">v1.0.0</dd>
 
-                            <dt class="col-sm-4">Sunucu Adresi:</dt>
-                            <dd class="col-sm-8">{{ request.host }}</dd>
+                                    <dt class="col-sm-5">Sunucu Adresi:</dt>
+                                    <dd class="col-sm-7">{{ request.host }}</dd>
 
-                            <dt class="col-sm-4">Aktif Kullanıcı:</dt>
-                            <dd class="col-sm-8">{{ current_user.username }}</dd>
-                        </dl>
+                                    <dt class="col-sm-5">Aktif Kullanıcı:</dt>
+                                    <dd class="col-sm-7">{{ current_user.username }}</dd>
+                                </dl>
+                            </div>
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <dl class="row mb-0">
-                            <dt class="col-sm-4">Veritabanı:</dt>
-                            <dd class="col-sm-8">SQLite</dd>
+                        <div class="card bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">
+                                    <i class="fas fa-server me-2"></i>Sistem Durumu
+                                </h6>
+                                <dl class="row">
+                                    <dt class="col-sm-5">Veritabanı:</dt>
+                                    <dd class="col-sm-7">SQLite</dd>
 
-                            <dt class="col-sm-4">Terazi Durum:</dt>
-                            <dd class="col-sm-8">
-                                <span class="badge {% if scale_connected %}bg-success{% else %}bg-warning{% endif %}">
-                                    {% if scale_connected %}Bağlı{% else %}Simülasyon{% endif %}
-                                </span>
-                            </dd>
+                                    <dt class="col-sm-5">Terazi Durumu:</dt>
+                                    <dd class="col-sm-7">
+                                        <span class="badge {% if scale_connected %}bg-success{% else %}bg-warning{% endif %}">
+                                            {{ 'Bağlı' if scale_connected else 'Simülasyon' }}
+                                        </span>
+                                    </dd>
 
-                            <dt class="col-sm-4">Seçili Ayar:</dt>
-                            <dd class="col-sm-8">{{ session.get('selected_setting', 'Seçilmedi') }}</dd>
-                        </dl>
+                                    <dt class="col-sm-5">Seçili Ayar:</dt>
+                                    <dd class="col-sm-7">{{ session.get('selected_setting', 'Seçilmedi') }}</dd>
+                                </dl>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Şifre görünürlüğü toggle fonksiyonları
+    function setupPasswordToggle(oldId, newId, confirmId) {
+        const oldPassword = document.getElementById(oldId);
+        const newPassword = document.getElementById(newId);
+        const confirmPassword = document.getElementById(confirmId);
+
+        document.getElementById(`toggle${oldId.charAt(0).toUpperCase() + oldId.slice(1)}`).addEventListener('click', function() {
+            togglePasswordVisibility(oldPassword, this);
+        });
+
+        document.getElementById(`toggle${newId.charAt(0).toUpperCase() + newId.slice(1)}`).addEventListener('click', function() {
+            togglePasswordVisibility(newPassword, this);
+        });
+
+        document.getElementById(`toggle${confirmId.charAt(0).toUpperCase() + confirmId.slice(1)}`).addEventListener('click', function() {
+            togglePasswordVisibility(confirmPassword, this);
+        });
+    }
+
+    function togglePasswordVisibility(input, button) {
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+
+        const icon = button.querySelector('i');
+        icon.classList.toggle('fa-eye');
+        icon.classList.toggle('fa-eye-slash');
+    }
+
+    // Şifre görünürlüğünü ayarla
+    setupPasswordToggle('old_password', 'new_password', 'confirm_password');
+
+    // Form doğrulama
+    const forms = document.querySelectorAll('.needs-validation');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            // Şifre kontrolü
+            const newPassword = document.getElementById('new_password');
+            const confirmPassword = document.getElementById('confirm_password');
+
+            if (newPassword.value !== confirmPassword.value) {
+                event.preventDefault();
+                confirmPassword.setCustomValidity('Şifreler eşleşmiyor');
+                confirmPassword.reportValidity();
+            } else {
+                confirmPassword.setCustomValidity('');
+            }
+
+            form.classList.add('was-validated');
+        });
+    });
+
+    // Mobil optimizasyonu
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.add('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.add('input-group-text-lg');
+            });
+        } else {
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.remove('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.remove('input-group-text-lg');
+            });
+        }
+    }
+
+    optimizeForMobile();
+    window.addEventListener('resize', optimizeForMobile);
+});
+</script>
 {% endblock %}
