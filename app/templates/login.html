@@ -1,23 +1,227 @@
-{% extends 'base.html' %}
-
-{% block title %}Giriş - Kuyumcu Takip Sistemi{% endblock %}
-
-{% block content %}
-<div class="row justify-content-center mt-5">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white text-center py-3">
-                <h3 class="mb-0"><i class="fas fa-gem me-2"></i>Kuyumcu Takip</h3>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Giriş - Kuyumcu Takip Sistemi</title>
+    <!-- Bootstrap 5.3 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}">
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#212529">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .login-container {
+            max-width: 420px;
+            width: 100%;
+        }
+        
+        .login-card {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .login-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .login-icon {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+        
+        .login-icon i {
+            font-size: 2.5rem;
+            color: white;
+        }
+        
+        .login-title {
+            color: white;
+            font-weight: 300;
+            font-size: 1.8rem;
+            margin: 0;
+        }
+        
+        .login-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+            margin-top: 0.5rem;
+        }
+        
+        .login-body {
+            padding: 2rem;
+        }
+        
+        .input-group-text {
+            background-color: #f8f9fa;
+            border-right: none;
+        }
+        
+        .form-control {
+            border-left: none;
+        }
+        
+        .form-control:focus {
+            box-shadow: none;
+            border-color: #ced4da;
+        }
+        
+        .form-control:focus + .input-group-text {
+            border-color: #ced4da;
+        }
+        
+        .btn-login {
+            padding: 0.8rem;
+            font-weight: 500;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border: none;
+            transition: all 0.3s;
+        }
+        
+        .btn-login:hover, .btn-login:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
+        }
+        
+        .login-footer {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .login-footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .remember-me input {
+            margin-right: 0.5rem;
+        }
+        
+        .remember-me label {
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+        
+        .error-alert {
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        
+        @media (max-width: 576px) {
+            .login-header {
+                padding: 1.5rem;
+            }
+            
+            .login-icon {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .login-icon i {
+                font-size: 2rem;
+            }
+            
+            .login-title {
+                font-size: 1.5rem;
+            }
+            
+            .login-body {
+                padding: 1.5rem;
+            }
+            
+            .login-card {
+                margin-bottom: 1rem;
+            }
+        }
+        
+        .login-animation {
+            animation: fadeInUp 0.5s;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card login-animation">
+            <div class="login-header">
+                <div class="login-icon">
+                    <i class="fas fa-gem"></i>
+                </div>
+                <h1 class="login-title">Kuyumcu Takip Sistemi</h1>
+                <p class="login-subtitle">Lütfen giriş bilgilerinizi girin</p>
             </div>
-            <div class="card-body p-4">
-                <h4 class="text-center mb-4">Giriş Yap</h4>
+            <div class="login-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show error-alert">
+                                <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
 
-                <form method="post">
+                <form method="post" class="needs-validation" novalidate>
                     <div class="mb-3">
                         <label for="username" class="form-label">Kullanıcı Adı</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-user"></i></span>
-                            <input type="text" class="form-control" id="username" name="username" required>
+                            <input type="text" class="form-control" id="username" name="username" required autofocus>
+                            <div class="invalid-feedback">
+                                Kullanıcı adı gereklidir.
+                            </div>
                         </div>
                     </div>
 
@@ -26,17 +230,98 @@
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-lock"></i></span>
                             <input type="password" class="form-control" id="password" name="password" required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <div class="invalid-feedback">
+                                Şifre gereklidir.
+                            </div>
                         </div>
                     </div>
 
+                    <div class="remember-me">
+                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                        <label class="form-check-label" for="remember">Beni hatırla</label>
+                    </div>
+
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary btn-login">
                             <i class="fas fa-sign-in-alt me-2"></i>Giriş Yap
                         </button>
                     </div>
                 </form>
             </div>
         </div>
+        
+        <div class="login-footer">
+            <p>© 2025 Kuyumcu Takip Sistemi</p>
+            <p><a href="#" id="forgot-password">Şifremi unuttum</a> | <a href="#" id="contact-support">Destek</a></p>
+        </div>
     </div>
-</div>
-{% endblock %}
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Şifre görünürlüğü değiştirme
+            const togglePasswordButton = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            
+            if (togglePasswordButton && passwordInput) {
+                togglePasswordButton.addEventListener('click', function() {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    
+                    // Göz ikonunu değiştir
+                    const icon = this.querySelector('i');
+                    icon.classList.toggle('fa-eye');
+                    icon.classList.toggle('fa-eye-slash');
+                });
+            }
+            
+            // Form doğrulama
+            const form = document.querySelector('.needs-validation');
+            
+            if (form) {
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    
+                    form.classList.add('was-validated');
+                });
+            }
+            
+            // Şifremi unuttum ve destek bağlantıları
+            const forgotPasswordLink = document.getElementById('forgot-password');
+            const contactSupportLink = document.getElementById('contact-support');
+            
+            if (forgotPasswordLink) {
+                forgotPasswordLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('Şifre sıfırlama özelliği yakında eklenecektir. Lütfen sistem yöneticinize başvurun.');
+                });
+            }
+            
+            if (contactSupportLink) {
+                contactSupportLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('Destek almak için: support@kuyumcutakip.com');
+                });
+            }
+            
+            // Otomatik kapanan uyarılar
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    const closeButton = alert.querySelector('.btn-close');
+                    if (closeButton) {
+                        closeButton.click();
+                    }
+                }, 5000); // 5 saniye sonra kapat
+            });
+        });
+    </script>
+</body>
+</html>

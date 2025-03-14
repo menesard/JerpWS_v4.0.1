@@ -5,73 +5,139 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <h2 class="border-bottom pb-2"><i class="fas fa-balance-scale me-2"></i>Manuel İşlemler</h2>
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-balance-scale me-2"></i>Manuel İşlemler
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneli</span>
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="row">
     <!-- İşlem Formu -->
-    <div class="col-md-6 mb-4">
+    <div class="col-lg-6 col-md-6 mb-4">
         <div class="card shadow">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0"><i class="fas fa-edit me-2"></i>İşlem Formu</h5>
             </div>
             <div class="card-body">
-                <form method="post">
-                    <div class="mb-3">
+                <form method="post" class="needs-validation" novalidate id="operationForm">
+                    <div class="mb-4">
                         <label class="form-label">İşlem Tipi</label>
-                        <div class="btn-group w-100" role="group">
-                            <input type="radio" class="btn-check" name="operation_type" id="operation_add" value="add" checked>
-                            <label class="btn btn-outline-success" for="operation_add">
-                                <i class="fas fa-plus me-1"></i>Ekle
-                            </label>
+                        <div class="d-flex operation-type-btns">
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="operation_type" id="operation_add" value="add" checked>
+                                <label class="btn btn-outline-success" for="operation_add">
+                                    <i class="fas fa-plus me-1"></i>Ekle
+                                </label>
 
-                            <input type="radio" class="btn-check" name="operation_type" id="operation_subtract" value="subtract">
-                            <label class="btn btn-outline-danger" for="operation_subtract">
-                                <i class="fas fa-minus me-1"></i>Çıkar
-                            </label>
+                                <input type="radio" class="btn-check" name="operation_type" id="operation_subtract" value="subtract">
+                                <label class="btn btn-outline-danger" for="operation_subtract">
+                                    <i class="fas fa-minus me-1"></i>Çıkar
+                                </label>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="region" class="form-label">Bölge</label>
-                        <select class="form-select" id="region" name="region">
-                            {% for region in regions %}
-                            <option value="{{ region.name }}">{{ region.name_tr|capitalize }}</option>
-                            {% endfor %}
-                        </select>
+                        <label for="region" class="form-label">Bölge <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                            <select class="form-select" id="region" name="region" required>
+                                {% for region in regions %}
+                                <option value="{{ region.name }}" {% if request.args.get('region') == region.name %}selected{% endif %}>
+                                    {{ region.name_tr|capitalize }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">
+                                Lütfen bir bölge seçin.
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="gram" class="form-label">Gram</label>
+                        <label for="gram" class="form-label">Gram <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="number" step="0.01" min="0.01" class="form-control" id="gram" name="gram" value="{{ '%.2f'|format(weight) }}" required>
+                            <span class="input-group-text"><i class="fas fa-weight-hanging"></i></span>
+                            <input type="number" step="0.01" min="0.01" class="form-control" id="gram" name="gram"
+                                   value="{{ '%.2f'|format(weight) }}" required>
                             <span class="input-group-text">g</span>
                             <button type="button" id="use-scale" class="btn btn-outline-secondary">
-                                <i class="fas fa-weight me-1"></i>Teraziden Al
+                                <i class="fas fa-sync-alt me-1"></i><span class="d-none d-md-inline-block">Teraziden Al</span>
                             </button>
+                        </div>
+                        <div class="invalid-feedback">
+                            Geçerli bir gram değeri giriniz.
                         </div>
                     </div>
 
-                    <div class="mt-4">
-                        <button type="submit" class="btn btn-primary w-100">
+                    <div class="mt-4 d-flex flex-wrap gap-2 justify-content-between">
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Seçili ayar: <span class="badge bg-primary">{{ selected_setting }}</span>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
                             <i class="fas fa-check-circle me-2"></i>İşlemi Gerçekleştir
                         </button>
                     </div>
                 </form>
             </div>
         </div>
+
+        <!-- Hızlı İşlemler Kartı (Mobil) -->
+        <div class="card shadow mt-4 d-md-none">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-star me-2"></i>Hızlı İşlemler</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action quick-op" data-region="table" data-op="add">
+                        <div class="d-flex align-items-center">
+                            <div class="quick-op-icon bg-success me-3">
+                                <i class="fas fa-arrow-right text-white"></i>
+                            </div>
+                            <span>Kasadan Masaya Al</span>
+                        </div>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action quick-op" data-region="table" data-op="subtract">
+                        <div class="d-flex align-items-center">
+                            <div class="quick-op-icon bg-danger me-3">
+                                <i class="fas fa-arrow-left text-white"></i>
+                            </div>
+                            <span>Masadan Kasaya Koy</span>
+                        </div>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action quick-op" data-region="polish" data-op="add">
+                        <div class="d-flex align-items-center">
+                            <div class="quick-op-icon bg-primary me-3">
+                                <i class="fas fa-brush text-white"></i>
+                            </div>
+                            <span>Cilaya Gönder</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Terazi ve Bilgi Kartı -->
-    <div class="col-md-6 mb-4">
+    <div class="col-lg-6 col-md-6 mb-4">
         <div class="card shadow mb-4">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-weight me-2"></i>Terazi</h5>
+                <a href="{{ url_for('main.tare_scale') }}?redirect={{ request.path|urlencode }}" class="btn btn-sm btn-light" title="Teraziyi Sıfırla">
+                    <i class="fas fa-balance-scale"></i>
+                </a>
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
-                    <span class="display-4 fw-bold" id="weight-display">
+                    <span class="display-4 fw-bold weight-display-mobile" id="weight-display">
                         {{ '%.2f'|format(weight) }}
                     </span>
                     <span class="fs-3">g</span>
@@ -82,101 +148,379 @@
                     </span>
                 </div>
                 <div class="d-grid">
-                    <a href="{{ url_for('main.tare_scale') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-balance-scale me-2"></i>Teraziyi Sıfırla
-                    </a>
+                    <button type="button" id="use-scale-btn" class="btn btn-outline-primary">
+                        <i class="fas fa-sync-alt me-2"></i>Terazi Değerini Kullan
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div class="card shadow">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>İşlem Bilgileri</h5>
+        <div class="card shadow d-none d-md-block">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Bölge Bilgileri</h5>
+                <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#regionInfoCollapse">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
             </div>
-            <div class="card-body">
-                <ul class="list-group">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-gem me-2"></i>Seçili Ayar:</span>
-                        <span class="badge bg-primary">{{ selected_setting }}</span>
-                    </li>
-                    <li class="list-group-item">
-                        <h6><i class="fas fa-info-circle me-2"></i>Bilgilendirme</h6>
-                        <p class="small text-muted mb-0">
-                            İşlemler, belirtilen bölge ve gram değerine göre gerçekleştirilir.
-                            Teraziden ölçüm almak için "Teraziden Al" butonunu kullanabilirsiniz.
-                        </p>
-                    </li>
-                </ul>
+            <div class="collapse show" id="regionInfoCollapse">
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush" id="region-info-list">
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted"><i class="fas fa-vault me-2"></i>Kasa:</span>
+                                <span class="fw-bold region-amount" data-region="safe">Yükleniyor...</span>
+                            </div>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted"><i class="fas fa-table me-2"></i>Masa:</span>
+                                <span class="fw-bold region-amount" data-region="table">Yükleniyor...</span>
+                            </div>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted"><i class="fas fa-brush me-2"></i>Cila:</span>
+                                <span class="fw-bold region-amount" data-region="polish">Yükleniyor...</span>
+                            </div>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted"><i class="fas fa-fire me-2"></i>Eritme:</span>
+                                <span class="fw-bold region-amount" data-region="melting">Yükleniyor...</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Son İşlemler -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Son İşlemler</h5>
+                <a href="{{ url_for('main.history') }}" class="btn btn-sm btn-light">
+                    <i class="fas fa-external-link-alt me-1"></i><span class="d-none d-md-inline-block">Tüm Geçmiş</span>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0 table-mobile" id="recent-operations">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Zaman</th>
+                                <th>İşlem</th>
+                                <th>Kaynak</th>
+                                <th>Hedef</th>
+                                <th>Ayar</th>
+                                <th>Gram</th>
+                                <th class="d-none d-md-table-cell">Kullanıcı</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="text-center py-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Yükleniyor...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İşlem sonrası bildirim modalı -->
+<div class="modal fade" id="operationResultModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>İşlem Sonucu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="operation-result-icon" class="mb-3">
+                    <i class="fas fa-check-circle text-success fa-5x"></i>
+                </div>
+                <h4 id="operation-result-title" class="mb-3">İşlem Başarılı</h4>
+                <p id="operation-result-message" class="mb-0">İşlem başarıyla tamamlandı.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Tamam</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mobil cihazlar için hızlı eylem butonu -->
+<div class="quick-actions d-md-none">
+    <button type="button" class="quick-action-btn btn btn-primary" id="mobileSubmitBtn">
+        <i class="fas fa-check"></i>
+    </button>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // URL parametrelerini kontrol et
-    const urlParams = new URLSearchParams(window.location.search);
-    const regionParam = urlParams.get('region');
-    const operationParam = urlParams.get('operation');
+    // Form elemanları
+    const operationForm = document.getElementById('operationForm');
+    const gramInput = document.getElementById('gram');
+    const regionSelect = document.getElementById('region');
+    const operationTypeRadios = document.querySelectorAll('input[name="operation_type"]');
+    const mobileSubmitBtn = document.getElementById('mobileSubmitBtn');
 
-    // Varsa, form değerlerini güncelle
-    if (regionParam) {
-        document.getElementById('region').value = regionParam;
-    }
+    // Form gönderme işlevi
+    function submitForm() {
+        if (operationForm.checkValidity()) {
+            // Form verilerini al
+            const formData = new FormData(operationForm);
+            const operation = Object.fromEntries(formData.entries());
 
-    if (operationParam) {
-        if (operationParam === 'add') {
-            document.getElementById('operation_add').checked = true;
-        } else if (operationParam === 'subtract') {
-            document.getElementById('operation_subtract').checked = true;
+            // İşlem gerçekleştirme API isteği
+            performOperation(operation);
+        } else {
+            // Form doğrulamasını göster
+            operationForm.classList.add('was-validated');
+
+            // İlk hatayı bul ve odaklan
+            const firstInvalid = operationForm.querySelector(':invalid');
+            if (firstInvalid) {
+                firstInvalid.focus();
+            }
         }
     }
 
-    // Teraziden Al butonu
-    document.getElementById('use-scale').addEventListener('click', function() {
-        fetch('/api/weight')
-            .then(response => {
-                if (response.status === 401) {
-                    window.location.href = "{{ url_for('main.login') }}";
-                    return;
+    // Mobil gönder butonu
+    if (mobileSubmitBtn) {
+        mobileSubmitBtn.addEventListener('click', submitForm);
+    }
+
+    // Form gönderildiğinde
+    if (operationForm) {
+        operationForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitForm();
+        });
+    }
+
+    // İşlem gerçekleştirme API isteği
+    async function performOperation(operation) {
+        try {
+            // İşlem verilerini hazırla
+            const data = {
+                operation_type: operation.operation_type,
+                region: operation.region,
+                gram: parseFloat(operation.gram),
+                setting: "{{ selected_setting }}"
+            };
+
+            // Doğru endpoint'i belirle
+            let endpoint = '/api/add_item';
+            if (operation.operation_type === 'subtract') {
+                endpoint = '/api/remove_item';
+            }
+
+            // Yükleme göstergesini göster
+            showLoading(true);
+
+            // API isteği gönder
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            // Yükleme göstergesini gizle
+            showLoading(false);
+
+            // Sonucu göster
+            if (response.ok) {
+                showOperationResult(true, 'İşlem Başarılı', result.message || 'İşlem başarıyla tamamlandı.');
+
+                // Son işlemleri yenile
+                loadRecentOperations();
+
+                // Bölge bilgilerini güncelle
+                updateRegionInfo();
+
+                // Formu sıfırla
+                gramInput.value = document.getElementById('weight-display').textContent;
+                operationForm.classList.remove('was-validated');
+            } else {
+                showOperationResult(false, 'İşlem Başarısız', result.error || 'İşlem gerçekleştirilemedi.');
+            }
+        } catch (error) {
+            showLoading(false);
+            showOperationResult(false, 'Hata', 'Bir hata oluştu: ' + error.message);
+            console.error('İşlem hatası:', error);
+        }
+    }
+
+    // Bölge bilgilerini güncelleme
+    async function updateRegionInfo() {
+        try {
+            const response = await fetch(`/api/status/${encodeURIComponent('{{ selected_setting }}')}`, {
+                method: 'GET'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const status = data.status;
+
+                // Bölge miktarlarını güncelle
+                document.querySelectorAll('.region-amount').forEach(element => {
+                    const region = element.getAttribute('data-region');
+                    if (status[region] && status[region]['{{ selected_setting }}'] !== undefined) {
+                        const amount = status[region]['{{ selected_setting }}'];
+                        element.textContent = amount.toFixed(2) + ' g';
+
+                        // Miktara göre renklendir
+                        if (amount > 0) {
+                            element.classList.add('text-success');
+                            element.classList.remove('text-muted');
+                        } else {
+                            element.classList.remove('text-success');
+                            element.classList.add('text-muted');
+                        }
+                    } else {
+                        element.textContent = '0.00 g';
+                        element.classList.remove('text-success');
+                        element.classList.add('text-muted');
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Bölge bilgileri alınamadı:', error);
+        }
+    }
+
+    // Son işlemleri yükleme
+    async function loadRecentOperations() {
+        try {
+            const response = await fetch('/api/logs?limit=5', {
+                method: 'GET'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const logs = data.logs;
+
+                // Tablo içeriğini güncelle
+                const tbody = document.querySelector('#recent-operations tbody');
+                tbody.innerHTML = '';
+
+                if (logs.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center py-3">
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>Henüz işlem kaydı bulunmuyor
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    logs.forEach(log => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td data-label="Zaman">${log.time}</td>
+                            <td data-label="İşlem">
+                                <span class="badge ${log.operation_type === 'ADD' ? 'bg-success' : 'bg-danger'}">
+                                    ${log.operation_type === 'ADD' ? 'EKLEME' : 'ÇIKARMA'}
+                                </span>
+                            </td>
+                            <td data-label="Kaynak">${log.source_region || '-'}</td>
+                            <td data-label="Hedef">${log.target_region || '-'}</td>
+                            <td data-label="Ayar">${log.setting}</td>
+                            <td data-label="Gram">${log.gram}</td>
+                            <td data-label="Kullanıcı" class="d-none d-md-table-cell">${log.username}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
                 }
-                return response.json();
-            })
+            }
+        } catch (error) {
+            console.error('İşlem kayıtları alınamadı:', error);
+        }
+    }
+
+    // Teraziden Al butonları
+    const useScaleButton = document.getElementById('use-scale');
+    const useScaleBtn = document.getElementById('use-scale-btn');
+
+    function updateGramFromScale() {
+        fetch('/api/weight')
+            .then(response => response.json())
             .then(data => {
                 if (data) {
-                    document.getElementById('gram').value = data.weight.toFixed(2);
+                    gramInput.value = data.weight.toFixed(2);
+
+                    // Form doğrulama güncellemesi
+                    if (gramInput.classList.contains('is-invalid')) {
+                        gramInput.classList.remove('is-invalid');
+                        if (parseFloat(gramInput.value) > 0) {
+                            gramInput.classList.add('is-valid');
+                        }
+                    }
+
+                    // Kullanıcıya bildirim
+                    showNotification('Terazi değeri alındı', 'success');
                 }
             })
             .catch(error => {
                 console.error('Ağırlık bilgisi alınamadı:', error);
+                showNotification('Ağırlık bilgisi alınamadı', 'danger');
             });
-    });
+    }
+
+    if (useScaleButton) {
+        useScaleButton.addEventListener('click', updateGramFromScale);
+    }
+
+    if (useScaleBtn) {
+        useScaleBtn.addEventListener('click', updateGramFromScale);
+    }
 
     // Terazi ağırlığını periyodik olarak güncelle
     function updateWeight() {
         fetch('/api/weight')
-            .then(response => {
-                if (response.status === 401) {
-                    window.location.href = "{{ url_for('main.login') }}";
-                    return;
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (data) {
-                    document.getElementById('weight-display').textContent = data.weight.toFixed(2);
+                    const displayElement = document.getElementById('weight-display');
+                    const statusElement = document.getElementById('weight-status');
 
-                    const weightStatus = document.getElementById('weight-status');
-                    if (data.is_valid) {
-                        weightStatus.textContent = 'Geçerli Okuma';
-                        weightStatus.classList.remove('bg-warning');
-                        weightStatus.classList.add('bg-success');
-                    } else {
-                        weightStatus.textContent = 'Son Bilinen Değer';
-                        weightStatus.classList.remove('bg-success');
-                        weightStatus.classList.add('bg-warning');
+                    if (displayElement) {
+                        displayElement.textContent = data.weight.toFixed(2);
+
+                        // Ağırlık değişimi animasyonu
+                        displayElement.classList.add('weight-updated');
+                        setTimeout(() => {
+                            displayElement.classList.remove('weight-updated');
+                        }, 300);
+                    }
+
+                    if (statusElement) {
+                        if (data.is_valid) {
+                            statusElement.textContent = 'Geçerli Okuma';
+                            statusElement.classList.remove('bg-warning');
+                            statusElement.classList.add('bg-success');
+                        } else {
+                            statusElement.textContent = 'Son Bilinen Değer';
+                            statusElement.classList.remove('bg-success');
+                            statusElement.classList.add('bg-warning');
+                        }
                     }
                 }
             })
@@ -187,9 +531,256 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // İlk yükleme
     updateWeight();
+    loadRecentOperations();
+    updateRegionInfo();
 
-    // Her 1 saniyede bir güncelle
-    setInterval(updateWeight, 1000);
+    // Her 1 saniyede bir ağırlığı güncelle
+    const weightUpdateInterval = setInterval(updateWeight, 1000);
+
+    // Sayfa kapatıldığında interval'i temizle
+    window.addEventListener('beforeunload', function() {
+        clearInterval(weightUpdateInterval);
+    });
+
+    // Yükleme göstergesi
+    function showLoading(show) {
+        const loadingElement = document.querySelector('.loading-overlay');
+
+        if (show) {
+            if (!loadingElement) {
+                const overlay = document.createElement('div');
+                overlay.className = 'loading-overlay';
+                overlay.innerHTML = `
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            }
+        } else {
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+        }
+    }
+
+    // İşlem sonucunu modal ile gösterme
+    function showOperationResult(isSuccess, title, message) {
+        const modal = new bootstrap.Modal(document.getElementById('operationResultModal'));
+        const iconElement = document.getElementById('operation-result-icon');
+        const titleElement = document.getElementById('operation-result-title');
+        const messageElement = document.getElementById('operation-result-message');
+
+        // İçeriği güncelle
+        if (isSuccess) {
+            iconElement.innerHTML = '<i class="fas fa-check-circle text-success fa-5x"></i>';
+            titleElement.className = 'mb-3 text-success';
+        } else {
+            iconElement.innerHTML = '<i class="fas fa-exclamation-circle text-danger fa-5x"></i>';
+            titleElement.className = 'mb-3 text-danger';
+        }
+
+        titleElement.textContent = title;
+        messageElement.textContent = message;
+
+        // Modalı göster
+        modal.show();
+    }
+
+    // Bildirim gösterme fonksiyonu
+    function showNotification(message, type = 'info', duration = 3000) {
+        // Bildirim container'ı oluştur veya mevcut olanı al
+        let container = document.querySelector('.notification-container');
+
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'notification-container';
+            document.body.appendChild(container);
+        }
+
+        // Bildirim elementi oluştur
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type} fade-in`;
+
+        // İkon ekle
+        let icon = '';
+        switch (type) {
+            case 'success':
+                icon = '<i class="fas fa-check-circle"></i>';
+                break;
+            case 'danger':
+                icon = '<i class="fas fa-exclamation-circle"></i>';
+                break;
+            case 'warning':
+                icon = '<i class="fas fa-exclamation-triangle"></i>';
+                break;
+            default:
+                icon = '<i class="fas fa-info-circle"></i>';
+                break;
+        }
+
+        notification.innerHTML = `
+            <div class="notification-icon">${icon}</div>
+            <div class="notification-message">${message}</div>
+            <button class="notification-close"><i class="fas fa-times"></i></button>
+        `;
+
+        // Container'a ekle
+        container.appendChild(notification);
+
+        // Kapatma butonunu etkinleştir
+        const closeButton = notification.querySelector('.notification-close');
+        closeButton.addEventListener('click', () => {
+            notification.classList.add('fade-out');
+
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        });
+
+        // Belirli süre sonra otomatik kapat
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, duration);
+    }
+
+    // Hızlı işlem bağlantıları
+    const quickOpLinks = document.querySelectorAll('.quick-op');
+    quickOpLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const region = this.getAttribute('data-region');
+            const operation = this.getAttribute('data-op');
+
+            // Form değerlerini güncelle
+            regionSelect.value = region;
+
+            document.querySelectorAll('input[name="operation_type"]').forEach(radio => {
+                if (radio.value === operation) {
+                    radio.checked = true;
+                }
+            });
+
+            // Terazi değerini al
+            updateGramFromScale();
+
+            // Form'a odaklan
+            gramInput.focus();
+        });
+    });
+
+    // Teraziyi sıfırlama butonu
+    const tareButton = document.querySelector('[title="Teraziyi Sıfırla"]');
+    if (tareButton) {
+        tareButton.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Buton durumunu güncelle
+            this.classList.add('disabled');
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+            // AJAX ile sıfırlama isteği gönder
+            fetch('/api/tare', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showNotification(data.message, 'success');
+                } else {
+                    showNotification('Terazi sıfırlandı', 'success');
+                }
+
+                // Butonu eski haline getir
+                tareButton.classList.remove('disabled');
+                tareButton.innerHTML = '<i class="fas fa-balance-scale"></i>';
+            })
+            .catch(error => {
+                console.error('Terazi sıfırlama hatası:', error);
+                showNotification('Terazi sıfırlanamadı', 'danger');
+
+                // Butonu eski haline getir
+                tareButton.classList.remove('disabled');
+                tareButton.innerHTML = '<i class="fas fa-balance-scale"></i>';
+            });
+        });
+    }
+
+    // Mobil optimizasyonları
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            // Form alanlarını daha büyük yap
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.add('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.add('input-group-text-lg');
+            });
+
+            // Operation ve region seçimini kolaylaştır
+            document.querySelectorAll('.operation-type-btns .btn').forEach(btn => {
+                btn.classList.add('py-3');
+            });
+        } else {
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.remove('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.remove('input-group-text-lg');
+            });
+
+            document.querySelectorAll('.operation-type-btns .btn').forEach(btn => {
+                btn.classList.remove('py-3');
+            });
+        }
+    }
+
+    optimizeForMobile();
+    window.addEventListener('resize', optimizeForMobile);
+
+    // Custom CSS ekleme (yükleme göstergesi için)
+    const style = document.createElement('style');
+    style.textContent = `
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .quick-op-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Yükleme göstergesinin altında terazi güncellemelerinin görünmesi için */
+        #weight-display.weight-updated {
+            z-index: 10000;
+            position: relative;
+        }
+    `;
+
+    document.head.appendChild(style);
 });
 </script>
 {% endblock %}

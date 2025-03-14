@@ -5,61 +5,157 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col">
-        <h2 class="border-bottom pb-2"><i class="fas fa-history me-2"></i>İşlem Geçmişi</h2>
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-history me-2"></i>İşlem Geçmişi
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneli</span>
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="row">
+<!-- Filtre Paneli -->
+<div class="row mb-4">
     <div class="col-12">
         <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Tüm İşlemler</h5>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-outline-light" id="btn-filter">
-                            <i class="fas fa-filter me-1"></i>Filtrele
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-light" id="btn-excel">
-                            <i class="fas fa-file-excel me-1"></i>Excel
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-light" id="btn-print">
-                            <i class="fas fa-print me-1"></i>Yazdır
-                        </button>
-                    </div>
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>Filtreleme Seçenekleri
+                </h5>
+                <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                    <i class="fas fa-sliders-h"></i>
+                </button>
+            </div>
+            <div class="collapse" id="filterCollapse">
+                <div class="card-body">
+                    <form id="filterForm" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Tarih Aralığı</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" id="start-date" placeholder="Başlangıç">
+                                <span class="input-group-text"><i class="fas fa-arrow-right"></i></span>
+                                <input type="date" class="form-control" id="end-date" placeholder="Bitiş">
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">İşlem Tipi</label>
+                            <div class="d-flex">
+                                <div class="form-check me-3">
+                                    <input class="form-check-input" type="checkbox" id="filter-add" checked>
+                                    <label class="form-check-label" for="filter-add">Ekleme</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="filter-subtract" checked>
+                                    <label class="form-check-label" for="filter-subtract">Çıkarma</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="filter-region" class="form-label">Bölge</label>
+                            <select class="form-select" id="filter-region">
+                                <option value="">Tümü</option>
+                                <option value="safe">Kasa</option>
+                                <option value="table">Masa</option>
+                                <option value="polish">Cila</option>
+                                <option value="melting">Eritme</option>
+                                <option value="saw">Patlatma</option>
+                                <option value="acid">Boru</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="filter-setting" class="form-label">Ayar</label>
+                            <select class="form-select" id="filter-setting">
+                                <option value="">Tümü</option>
+                                <option value="8">8</option>
+                                <option value="14">14</option>
+                                <option value="18">18</option>
+                                <option value="21">21</option>
+                                <option value="22">22</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-end">
+                            <button type="button" id="filter-reset" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-undo me-1"></i>Sıfırla
+                            </button>
+                            <button type="button" id="apply-filter" class="btn btn-primary">
+                                <i class="fas fa-filter me-1"></i>Filtrele
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Tüm İşlemler
+                    <span class="badge bg-light text-dark ms-2" id="record-count">{{ logs|length }} Kayıt</span>
+                </h5>
+                <div class="btn-group">
+                    <input type="text" class="form-control form-control-sm" id="table-search" placeholder="Ara..." style="width: 150px;">
+                    <button type="button" class="btn btn-sm btn-light" id="btn-excel" title="Excel'e Aktar">
+                        <i class="fas fa-file-excel"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light" id="btn-print" data-action="print" title="Yazdır">
+                        <i class="fas fa-print"></i>
+                    </button>
                 </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover table-striped mb-0" id="history-table">
+                    <table class="table table-hover table-striped mb-0 table-mobile table-sortable" id="history-table">
                         <thead class="table-light">
                             <tr>
-                                <th>Zaman</th>
+                                <th class="sortable" data-sort="date">Zaman <i class="fas fa-sort"></i></th>
                                 <th>İşlem</th>
-                                <th>Kaynak</th>
-                                <th>Hedef</th>
-                                <th>Ayar</th>
-                                <th>Gram</th>
-                                <th>Kullanıcı</th>  <!-- Yeni eklenen sütun -->
+                                <th class="sortable" data-sort="source">Kaynak <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="target">Hedef <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="setting">Ayar <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="gram">Gram <i class="fas fa-sort"></i></th>
+                                <th class="sortable d-none d-md-table-cell" data-sort="user">Kullanıcı <i class="fas fa-sort"></i></th>
+                                <th class="d-none d-lg-table-cell">Detay</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for log in logs %}
-                            <tr>
-                                <td>{{ log.time }}</td>
-                                <td>
+                            <tr data-operation="{{ log.operation_type }}" data-source="{{ log.source_region }}" data-target="{{ log.target_region }}" data-setting="{{ log.setting }}">
+                                <td data-label="Zaman">{{ log.time }}</td>
+                                <td data-label="İşlem">
                                     <span class="badge {% if log.operation_type == 'ADD' %}bg-success{% else %}bg-danger{% endif %}">
                                         {{ log.operation_type_tr }}
                                     </span>
                                 </td>
-                                <td>{{ log.source_region_tr }}</td>
-                                <td>{{ log.target_region_tr }}</td>
-                                <td>{{ log.setting }}</td>
-                                <td>{{ log.gram }}</td>
-                                <td>{{ log.username }}</td>  <!-- Yeni eklenen kullanıcı bilgisi -->
+                                <td data-label="Kaynak">{{ log.source_region_tr }}</td>
+                                <td data-label="Hedef">{{ log.target_region_tr }}</td>
+                                <td data-label="Ayar">{{ log.setting }}</td>
+                                <td data-label="Gram">{{ log.gram }}</td>
+                                <td data-label="Kullanıcı" class="d-none d-md-table-cell">{{ log.username }}</td>
+                                <td data-label="Detay" class="d-none d-lg-table-cell">
+                                    <button type="button" class="btn btn-sm btn-info show-details" data-row-id="{{ loop.index }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center">Henüz işlem kaydı bulunmuyor</td>
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Henüz işlem kaydı bulunmuyor
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -70,73 +166,496 @@
     </div>
 </div>
 
-<!-- Filtre Modal -->
-<div class="modal fade" id="filterModal" tabindex="-1">
+<!-- Sayfalama -->
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="Sayfalama">
+            <ul class="pagination justify-content-center">
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Önceki</a>
+                </li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item">
+                    <a class="page-link" href="#">Sonraki</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- İşlem Detay Modalı -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="fas fa-filter me-2"></i>İşlemleri Filtrele</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailModalLabel">İşlem Detayları</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
             <div class="modal-body">
-                <form id="filter-form">
-                    <div class="mb-3">
-                        <label class="form-label">Tarih Aralığı</label>
-                        <div class="input-group">
-                            <input type="date" class="form-control" id="start-date">
-                            <span class="input-group-text">-</span>
-                            <input type="date" class="form-control" id="end-date">
-                        </div>
-                    </div>
+                <div class="detail-content">
+                    <dl class="row">
+                        <dt class="col-sm-4">İşlem Zamanı:</dt>
+                        <dd class="col-sm-8" id="detail-time"></dd>
 
-                    <div class="mb-3">
-                        <label class="form-label">İşlem Tipi</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="filter-add" checked>
-                            <label class="form-check-label" for="filter-add">Ekleme</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="filter-subtract" checked>
-                            <label class="form-check-label" for="filter-subtract">Çıkarma</label>
-                        </div>
-                    </div>
+                        <dt class="col-sm-4">İşlem Tipi:</dt>
+                        <dd class="col-sm-8" id="detail-operation"></dd>
 
-                    <div class="mb-3">
-                        <label for="filter-region" class="form-label">Bölge</label>
-                        <select class="form-select" id="filter-region">
-                            <option value="">Tümü</option>
-                            <option value="safe">Kasa</option>
-                            <option value="table">Masa</option>
-                            <option value="polish">Cila</option>
-                            <option value="melting">Eritme</option>
-                            <option value="saw">Patlatma</option>
-                            <option value="acid">Boru</option>
-                        </select>
-                    </div>
-                </form>
+                        <dt class="col-sm-4">Kaynak:</dt>
+                        <dd class="col-sm-8" id="detail-source"></dd>
+
+                        <dt class="col-sm-4">Hedef:</dt>
+                        <dd class="col-sm-8" id="detail-target"></dd>
+
+                        <dt class="col-sm-4">Ayar:</dt>
+                        <dd class="col-sm-8" id="detail-setting"></dd>
+
+                        <dt class="col-sm-4">Gram:</dt>
+                        <dd class="col-sm-8" id="detail-gram"></dd>
+
+                        <dt class="col-sm-4">Kullanıcı:</dt>
+                        <dd class="col-sm-8" id="detail-user"></dd>
+                    </dl>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-                <button type="button" class="btn btn-primary" id="apply-filter">Uygula</button>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Mobil cihazlar için hızlı eylem butonu -->
+<div class="quick-actions d-md-none">
+    <button type="button" class="quick-action-btn btn btn-primary" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+        <i class="fas fa-filter"></i>
+    </button>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Filtre butonu
-    document.getElementById('btn-filter').addEventListener('click', function() {
-        const filterModal = new bootstrap.Modal(document.getElementById('filterModal'));
-        filterModal.show();
-    });
+    // Filtre değişkenlerini tanımla
+    let startDate = '';
+    let endDate = '';
+    let showAdd = true;
+    let showSubtract = true;
+    let regionFilter = '';
+    let settingFilter = '';
+    let searchTerm = '';
+
+    // Tablo satırlarını al
+    const tableRows = document.querySelectorAll('#history-table tbody tr');
+    const recordCount = document.getElementById('record-count');
+
+    // Filtre butonları
+    const filterAddCheckbox = document.getElementById('filter-add');
+    const filterSubtractCheckbox = document.getElementById('filter-subtract');
+    const filterRegionSelect = document.getElementById('filter-region');
+    const filterSettingSelect = document.getElementById('filter-setting');
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
+    const applyFilterButton = document.getElementById('apply-filter');
+    const resetFilterButton = document.getElementById('filter-reset');
+    const tableSearchInput = document.getElementById('table-search');
+
+    // Filtre uygulama fonksiyonu
+    function applyFilters() {
+        // Filtre değerlerini al
+        startDate = startDateInput.value;
+        endDate = endDateInput.value;
+        showAdd = filterAddCheckbox.checked;
+        showSubtract = filterSubtractCheckbox.checked;
+        regionFilter = filterRegionSelect.value;
+        settingFilter = filterSettingSelect.value;
+        searchTerm = tableSearchInput.value.toLowerCase();
+
+        let visibleCount = 0;
+
+        // Tüm satırları filtrele
+        tableRows.forEach(row => {
+            // Tablo başlığı veya boş sonuç satırını atla
+            if (!row.hasAttribute('data-operation')) return;
+
+            const operation = row.getAttribute('data-operation');
+            const source = row.getAttribute('data-source');
+            const target = row.getAttribute('data-target');
+            const setting = row.getAttribute('data-setting');
+            const rowContent = row.textContent.toLowerCase();
+            const rowDate = row.cells[0].textContent;
+
+            // İşlem tipine göre filtrele
+            const operationMatch = (operation === 'ADD' && showAdd) || (operation === 'SUBTRACT' && showSubtract);
+
+            // Bölge filtreleme
+            const regionMatch = !regionFilter || source === regionFilter || target === regionFilter;
+
+            // Ayar filtreleme
+            const settingMatch = !settingFilter || setting === settingFilter;
+
+            // Tarih filtreleme
+            let dateMatch = true;
+            if (startDate) {
+                const rowDateObj = parseDate(rowDate);
+                const startDateObj = new Date(startDate);
+                dateMatch = rowDateObj >= startDateObj;
+            }
+            if (endDate && dateMatch) {
+                const rowDateObj = parseDate(rowDate);
+                const endDateObj = new Date(endDate);
+                endDateObj.setDate(endDateObj.getDate() + 1); // Bitiş tarihini dahil et
+                dateMatch = rowDateObj < endDateObj;
+            }
+
+            // Arama filtreleme
+            const searchMatch = !searchTerm || rowContent.includes(searchTerm);
+
+            // Tüm filtreler eşleşiyorsa satırı göster
+            const isVisible = operationMatch && regionMatch && settingMatch && dateMatch && searchMatch;
+            row.style.display = isVisible ? '' : 'none';
+
+            if (isVisible) visibleCount++;
+        });
+
+        // Kayıt sayısını güncelle
+        recordCount.textContent = `${visibleCount} Kayıt`;
+
+        // Eğer hiç görünür satır yoksa "Sonuç bulunamadı" mesajı göster
+        const noResultsRow = document.querySelector('.no-results-row');
+        if (visibleCount === 0 && tableRows.length > 0) {
+            if (!noResultsRow) {
+                const tbody = document.querySelector('#history-table tbody');
+                const newRow = document.createElement('tr');
+                newRow.className = 'no-results-row';
+                newRow.innerHTML = `
+                    <td colspan="8" class="text-center py-4">
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Filtreleme kriterlerine uygun işlem bulunamadı
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(newRow);
+            }
+        } else if (noResultsRow) {
+            noResultsRow.remove();
+        }
+    }
+
+    // Tarih formatını JS Date nesnesine çevir
+    function parseDate(dateStr) {
+        // Format: DD-MM-YYYY HH:MM:SS
+        const parts = dateStr.split(' ');
+        const dateParts = parts[0].split('-');
+        const timeParts = parts[1].split(':');
+
+        return new Date(
+            parseInt(dateParts[2]), // Yıl
+            parseInt(dateParts[1]) - 1, // Ay (0-11)
+            parseInt(dateParts[0]), // Gün
+            parseInt(timeParts[0]), // Saat
+            parseInt(timeParts[1]), // Dakika
+            parseInt(timeParts[2]) // Saniye
+        );
+    }
+
+    // Filtreleri uygula
+    if (applyFilterButton) {
+        applyFilterButton.addEventListener('click', function() {
+            applyFilters();
+            // Filtre panesini otomatik kapat
+            if (window.innerWidth <= 768) {
+                const collapse = bootstrap.Collapse.getInstance(document.getElementById('filterCollapse'));
+                if (collapse) collapse.hide();
+            }
+        });
+    }
+
+    // Filtreleri sıfırla
+    if (resetFilterButton) {
+        resetFilterButton.addEventListener('click', function() {
+            startDateInput.value = '';
+            endDateInput.value = '';
+            filterAddCheckbox.checked = true;
+            filterSubtractCheckbox.checked = true;
+            filterRegionSelect.value = '';
+            filterSettingSelect.value = '';
+            tableSearchInput.value = '';
+
+            applyFilters();
+        });
+    }
+
+    // Arama kutusu
+    if (tableSearchInput) {
+        tableSearchInput.addEventListener('input', function() {
+            searchTerm = this.value.toLowerCase();
+            applyFilters();
+        });
+    }
 
     // Yazdır butonu
-    document.getElementById('btn-print').addEventListener('click', function() {
-        window.print();
+    const printButton = document.getElementById('btn-print');
+    if (printButton) {
+        printButton.addEventListener('click', function() {
+            window.print();
+        });
+    }
+
+    // Excel butonu
+    const excelButton = document.getElementById('btn-excel');
+    if (excelButton) {
+        excelButton.addEventListener('click', function() {
+            exportToExcel();
+        });
+    }
+
+    // Excel'e aktarma fonksiyonu
+    function exportToExcel() {
+        // Sadece görünür satırları içeren bir dizi oluştur
+        const visibleRows = Array.from(tableRows).filter(row => row.style.display !== 'none' && !row.classList.contains('no-results-row'));
+
+        if (visibleRows.length === 0) {
+            showNotification('Dışa aktarılacak veri bulunamadı', 'warning');
+            return;
+        }
+
+        // CSV verisi oluştur
+        let csvContent = "Zaman,İşlem,Kaynak,Hedef,Ayar,Gram,Kullanıcı\n";
+
+        visibleRows.forEach(row => {
+            const cells = row.cells;
+            const time = cells[0].textContent.trim();
+            const operation = cells[1].textContent.trim();
+            const source = cells[2].textContent.trim();
+            const target = cells[3].textContent.trim();
+            const setting = cells[4].textContent.trim();
+            const gram = cells[5].textContent.trim();
+            const user = cells[6].textContent.trim();
+
+            // CSV satırı oluştur
+            csvContent += `"${time}","${operation}","${source}","${target}","${setting}","${gram}","${user}"\n`;
+        });
+
+        // CSV dosyasını indir
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `islem_gecmisi_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showNotification('İşlem geçmişi Excel formatında indirildi', 'success');
+    }
+
+    // Sıralama butonları
+    const sortableHeaders = document.querySelectorAll('th.sortable');
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const sortType = this.getAttribute('data-sort');
+            const isAscending = this.classList.contains('asc');
+
+            // Tüm sıralama sınıflarını temizle
+            sortableHeaders.forEach(h => {
+                h.classList.remove('asc', 'desc');
+                h.querySelector('i').className = 'fas fa-sort';
+            });
+
+            // Yeni sıralama yönünü belirle
+            this.classList.add(isAscending ? 'desc' : 'asc');
+            this.querySelector('i').className = isAscending ? 'fas fa-sort-down' : 'fas fa-sort-up';
+
+            // Görünür satırları al ve sırala
+            const tbody = document.querySelector('#history-table tbody');
+            const visibleRows = Array.from(tableRows).filter(row =>
+                row.style.display !== 'none' &&
+                !row.classList.contains('no-results-row')
+            );
+
+            // Sıralama işlemi
+            visibleRows.sort((a, b) => {
+                let aValue, bValue;
+
+                switch (sortType) {
+                    case 'date':
+                        aValue = parseDate(a.cells[0].textContent);
+                        bValue = parseDate(b.cells[0].textContent);
+                        return isAscending ? bValue - aValue : aValue - bValue;
+
+                    case 'source':
+                        aValue = a.cells[2].textContent.trim();
+                        bValue = b.cells[2].textContent.trim();
+                        break;
+
+                    case 'target':
+                        aValue = a.cells[3].textContent.trim();
+                        bValue = b.cells[3].textContent.trim();
+                        break;
+
+                    case 'setting':
+                        aValue = parseInt(a.cells[4].textContent.trim());
+                        bValue = parseInt(b.cells[4].textContent.trim());
+                        return isAscending ? bValue - aValue : aValue - bValue;
+
+                    case 'gram':
+                        aValue = parseFloat(a.cells[5].textContent.trim());
+                        bValue = parseFloat(b.cells[5].textContent.trim());
+                        return isAscending ? bValue - aValue : aValue - bValue;
+
+                    case 'user':
+                        aValue = a.cells[6].textContent.trim();
+                        bValue = b.cells[6].textContent.trim();
+                        break;
+
+                    default:
+                        return 0;
+                }
+
+                // Metin karşılaştırma
+                return isAscending ? bValue.localeCompare(aValue, 'tr') : aValue.localeCompare(bValue, 'tr');
+            });
+
+            // DOM'u güncelle
+            visibleRows.forEach(row => {
+                tbody.appendChild(row);
+            });
+
+            // "Sonuç yok" satırını en sona ekle
+            const noResultsRow = document.querySelector('.no-results-row');
+            if (noResultsRow) {
+                tbody.appendChild(noResultsRow);
+            }
+        });
     });
+
+    // Detay gösterme butonları
+    const detailButtons = document.querySelectorAll('.show-details');
+    if (detailButtons.length > 0) {
+        const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+
+        detailButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const rowId = this.getAttribute('data-row-id');
+                const row = document.querySelector(`#history-table tbody tr:nth-child(${rowId})`);
+
+                if (row) {
+                    // Modal içeriğini doldur
+                    document.getElementById('detail-time').textContent = row.cells[0].textContent;
+                    document.getElementById('detail-operation').textContent = row.cells[1].textContent;
+                    document.getElementById('detail-source').textContent = row.cells[2].textContent;
+                    document.getElementById('detail-target').textContent = row.cells[3].textContent;
+                    document.getElementById('detail-setting').textContent = row.cells[4].textContent;
+                    document.getElementById('detail-gram').textContent = row.cells[5].textContent;
+                    document.getElementById('detail-user').textContent = row.cells[6].textContent;
+
+                    // Modalı göster
+                    detailModal.show();
+                }
+            });
+        });
+    }
+
+    // Mobil cihazlarda satıra tıklama
+    if (window.innerWidth <= 768) {
+        tableRows.forEach(row => {
+            if (!row.classList.contains('no-results-row')) {
+                row.addEventListener('click', function(e) {
+                    // Eğer tıklanan buton değilse
+                    if (!e.target.closest('button') && !e.target.closest('a')) {
+                        // Detay modalını göster
+                        const detailButton = this.querySelector('.show-details');
+                        if (detailButton) {
+                            detailButton.click();
+                        } else {
+                            // Detay butonu yoksa satır verilerini modal'a manuel doldur
+                            const cells = this.cells;
+
+                            document.getElementById('detail-time').textContent = cells[0].textContent;
+                            document.getElementById('detail-operation').textContent = cells[1].textContent;
+                            document.getElementById('detail-source').textContent = cells[2].textContent;
+                            document.getElementById('detail-target').textContent = cells[3].textContent;
+                            document.getElementById('detail-setting').textContent = cells[4].textContent;
+                            document.getElementById('detail-gram').textContent = cells[5].textContent;
+                            document.getElementById('detail-user').textContent = cells[6].textContent;
+
+                            const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+                            detailModal.show();
+                        }
+                    }
+                });
+
+                // Tıklanabilir sınıfı ekle
+                row.classList.add('cursor-pointer');
+            }
+        });
+    }
+
+    // Bildirim gösterme fonksiyonu
+    function showNotification(message, type = 'info', duration = 3000) {
+        // Bildirim container'ı oluştur veya mevcut olanı al
+        let container = document.querySelector('.notification-container');
+
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'notification-container';
+            document.body.appendChild(container);
+        }
+
+        // Bildirim elementi oluştur
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type} fade-in`;
+
+        // İkon ekle
+        let icon = '';
+        switch (type) {
+            case 'success':
+                icon = '<i class="fas fa-check-circle"></i>';
+                break;
+            case 'danger':
+                icon = '<i class="fas fa-exclamation-circle"></i>';
+                break;
+            case 'warning':
+                icon = '<i class="fas fa-exclamation-triangle"></i>';
+                break;
+            default:
+                icon = '<i class="fas fa-info-circle"></i>';
+                break;
+        }
+
+        notification.innerHTML = `
+            <div class="notification-icon">${icon}</div>
+            <div class="notification-message">${message}</div>
+            <button class="notification-close"><i class="fas fa-times"></i></button>
+        `;
+
+        // Container'a ekle
+        container.appendChild(notification);
+
+        // Kapatma butonunu etkinleştir
+        const closeButton = notification.querySelector('.notification-close');
+        closeButton.addEventListener('click', () => {
+            notification.classList.add('fade-out');
+
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        });
+
+        // Belirli süre sonra otomatik kapat
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, duration);
+    }
 });
 </script>
-{% endblock %}  <!-- Bu satırı ekleyin -->
+{% endblock %}

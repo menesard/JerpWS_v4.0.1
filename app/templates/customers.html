@@ -11,21 +11,69 @@
 
 <div class="row mb-4">
     <div class="col-md-8">
-        <form method="get" class="d-flex">
-            <input type="text" name="search" class="form-control me-2" placeholder="Müşteri ara..." value="{{ search }}">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-search"></i>
-            </button>
+        <form method="get" class="d-flex search-form">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" name="search" class="form-control ps-0 border-start-0" placeholder="Müşteri ara..." value="{{ search }}" id="customerSearch">
+                {% if search %}
+                <button type="button" class="btn btn-outline-secondary border" id="clearSearch">
+                    <i class="fas fa-times"></i>
+                </button>
+                {% endif %}
+                <button type="submit" class="btn btn-primary">
+                    Ara
+                </button>
+            </div>
         </form>
     </div>
-    <div class="col-md-4 text-end">
+    <div class="col-md-4 d-flex justify-content-md-end justify-content-center mt-3 mt-md-0">
         <a href="{{ url_for('main.add_customer') }}" class="btn btn-success">
-            <i class="fas fa-plus me-1"></i>Yeni Müşteri
+            <i class="fas fa-user-plus me-1"></i>Yeni Müşteri
         </a>
     </div>
 </div>
 
-<div class="row">
+<!-- Filtreleme Seçenekleri -->
+<div class="row mb-4 d-none d-md-flex">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-body py-2">
+                <div class="d-flex flex-wrap align-items-center">
+                    <div class="me-3 mb-2 mb-md-0">
+                        <label class="form-label mb-0 me-2">Sırala:</label>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary sort-btn active" data-sort="name">İsim</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary sort-btn" data-sort="date">Tarih</button>
+                        </div>
+                    </div>
+
+                    <div class="me-3 mb-2 mb-md-0">
+                        <label class="form-label mb-0 me-2">Görünüm:</label>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary view-btn active" data-view="table">
+                                <i class="fas fa-table"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary view-btn" data-view="grid">
+                                <i class="fas fa-th"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ms-auto">
+                        <span class="badge bg-secondary" id="customerCount">
+                            {{ customers|length }} Müşteri
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tablo Görünümü -->
+<div class="row customer-view" id="tableView">
     <div class="col-12">
         <div class="card shadow">
             <div class="card-header bg-primary text-white">
@@ -33,30 +81,43 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover table-striped mb-0">
+                    <table class="table table-hover table-striped mb-0 table-mobile" id="customersTable">
                         <thead class="table-light">
                             <tr>
-                                <th>Müşteri Adı</th>
-                                <th>Telefon</th>
-                                <th>E-posta</th>
-                                <th>İşlemler</th>
+                                <th class="sortable" data-sort="name">Müşteri Adı</th>
+                                <th class="sortable" data-sort="phone">Telefon</th>
+                                <th class="d-none d-md-table-cell sortable" data-sort="email">E-posta</th>
+                                <th class="text-end">İşlemler</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for customer in customers %}
                             <tr>
-                                <td>{{ customer.name }}</td>
-                                <td>{{ customer.phone }}</td>
-                                <td>{{ customer.email }}</td>
-                                <td>
+                                <td data-label="Müşteri Adı">{{ customer.name }}</td>
+                                <td data-label="Telefon">{{ customer.phone or "-" }}</td>
+                                <td data-label="E-posta" class="d-none d-md-table-cell">{{ customer.email or "-" }}</td>
+                                <td data-label="İşlemler" class="text-end">
                                     <a href="{{ url_for('main.customer_detail', customer_id=customer.id) }}" class="btn btn-sm btn-info">
-                                        <i class="fas fa-eye"></i> Detay
+                                        <i class="fas fa-eye"></i><span class="d-none d-md-inline-block ms-1">Detay</span>
+                                    </a>
+                                    <a href="{{ url_for('main.add_customer_transaction', customer_id=customer.id) }}" class="btn btn-sm btn-success ms-1">
+                                        <i class="fas fa-plus"></i><span class="d-none d-md-inline-block ms-1">İşlem</span>
                                     </a>
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="4" class="text-center">Müşteri bulunamadı</td>
+                                <td colspan="4" class="text-center py-4">
+                                    {% if search %}
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>"{{ search }}" için müşteri bulunamadı
+                                    </div>
+                                    {% else %}
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Henüz müşteri bulunmuyor
+                                    </div>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -66,4 +127,242 @@
         </div>
     </div>
 </div>
+
+<!-- Kart Görünümü -->
+<div class="row customer-view d-none" id="gridView">
+    {% if customers|length > 0 %}
+        {% for customer in customers %}
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+            <div class="card shadow h-100 customer-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="customer-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h5 class="card-title mb-0 ms-2">{{ customer.name }}</h5>
+                    </div>
+                    <div class="customer-details">
+                        <p class="mb-2"><i class="fas fa-phone me-2 text-muted"></i>{{ customer.phone or "Telefon yok" }}</p>
+                        <p class="mb-3"><i class="fas fa-envelope me-2 text-muted"></i>{{ customer.email or "E-posta yok" }}</p>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('main.customer_detail', customer_id=customer.id) }}" class="btn btn-sm btn-info">
+                            <i class="fas fa-eye me-1"></i>Detay
+                        </a>
+                        <a href="{{ url_for('main.add_customer_transaction', customer_id=customer.id) }}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>İşlem Ekle
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                {% if search %}
+                "{{ search }}" için müşteri bulunamadı
+                {% else %}
+                Henüz müşteri bulunmuyor
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Mobil cihazlar için hızlı eylem butonu -->
+<div class="quick-actions d-md-none">
+    <a href="{{ url_for('main.add_customer') }}" class="quick-action-btn btn btn-success">
+        <i class="fas fa-user-plus"></i>
+    </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Görünüm değiştirme
+    const viewButtons = document.querySelectorAll('.view-btn');
+    const tableView = document.getElementById('tableView');
+    const gridView = document.getElementById('gridView');
+
+    viewButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Aktif sınıfını kaldır
+            viewButtons.forEach(btn => btn.classList.remove('active'));
+
+            // Tıklanan butona aktif sınıfı ekle
+            this.classList.add('active');
+
+            // Görünümü değiştir
+            const viewType = this.getAttribute('data-view');
+            if (viewType === 'table') {
+                tableView.classList.remove('d-none');
+                gridView.classList.add('d-none');
+                localStorage.setItem('customerViewPreference', 'table');
+            } else {
+                tableView.classList.add('d-none');
+                gridView.classList.remove('d-none');
+                localStorage.setItem('customerViewPreference', 'grid');
+            }
+        });
+    });
+
+    // Kullanıcı tercihini hatırla
+    const savedViewPreference = localStorage.getItem('customerViewPreference');
+    if (savedViewPreference === 'grid') {
+        // Grid görünümünü etkinleştir
+        document.querySelector('.view-btn[data-view="grid"]').click();
+    }
+
+    // Temizleme butonu
+    const clearButton = document.getElementById('clearSearch');
+    if (clearButton) {
+        clearButton.addEventListener('click', function() {
+            window.location.href = "{{ url_for('main.customers') }}";
+        });
+    }
+
+    // Anlık arama
+    const searchInput = document.getElementById('customerSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+
+            // Tablo görünümünde filtrele
+            const tableRows = document.querySelectorAll('#customersTable tbody tr');
+            let visibleCount = 0;
+
+            tableRows.forEach(row => {
+                if (row.cells.length > 1) { // Sonuç yok mesajı satırını atla
+                    const rowText = row.textContent.toLowerCase();
+                    const isVisible = rowText.includes(searchTerm);
+                    row.style.display = isVisible ? '' : 'none';
+
+                    if (isVisible) visibleCount++;
+                }
+            });
+
+            // Kart görünümünde filtrele
+            const customerCards = document.querySelectorAll('.customer-card');
+            customerCards.forEach(card => {
+                const cardText = card.textContent.toLowerCase();
+                card.closest('.col-lg-3').style.display = cardText.includes(searchTerm) ? '' : 'none';
+            });
+
+            // Müşteri sayısını güncelle
+            document.getElementById('customerCount').textContent = `${visibleCount} Müşteri`;
+
+            // Tüm sonuçlar gizliyse ve tablo görünümündeyse "Sonuç bulunamadı" mesajı göster
+            const noResultRow = document.querySelector('#tableView .no-results-row');
+
+            if (visibleCount === 0 && !noResultRow) {
+                const tbody = document.querySelector('#customersTable tbody');
+                const newRow = document.createElement('tr');
+                newRow.className = 'no-results-row';
+                newRow.innerHTML = `
+                    <td colspan="4" class="text-center py-4">
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>"${searchTerm}" için müşteri bulunamadı
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(newRow);
+            } else if (visibleCount > 0 && noResultRow) {
+                noResultRow.remove();
+            }
+        });
+    }
+
+    // Sıralama işlevi
+    const sortButtons = document.querySelectorAll('.sort-btn');
+    sortButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Aktif sınıfını kaldır
+            sortButtons.forEach(btn => btn.classList.remove('active'));
+
+            // Tıklanan butona aktif sınıfı ekle
+            this.classList.add('active');
+
+            // Sıralama türünü belirle
+            const sortType = this.getAttribute('data-sort');
+
+            // Tablo satırlarını sırala
+            const tbody = document.querySelector('#customersTable tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // Sonuç yok mesajı satırlarını filtrele
+            const dataRows = rows.filter(row => row.cells.length > 1);
+
+            // Sıralama işlemi
+            dataRows.sort((a, b) => {
+                let aValue, bValue;
+
+                if (sortType === 'name') {
+                    aValue = a.cells[0].textContent.trim();
+                    bValue = b.cells[0].textContent.trim();
+                    return aValue.localeCompare(bValue, 'tr');
+                } else if (sortType === 'date') {
+                    // Tarih bilgisi olmadığı için şimdilik ID'ye göre sıralama
+                    // Gerçek uygulamada burada oluşturulma tarihine göre sıralama yapılabilir
+                    return 0; // Şimdilik etkisiz
+                }
+
+                return 0;
+            });
+
+            // DOM'u güncelle - önce tüm satırları kaldır
+            rows.forEach(row => row.remove());
+
+            // Sıralanmış satırları ekle
+            dataRows.forEach(row => {
+                tbody.appendChild(row);
+            });
+
+            // Varsa "Sonuç bulunamadı" mesajını en sona ekle
+            const noResultRow = rows.find(row => row.classList.contains('no-results-row'));
+            if (noResultRow) {
+                tbody.appendChild(noResultRow);
+            }
+        });
+    });
+
+    // Mobil için müşteri kartlarını optimize et
+    const optimizeCustomerCards = function() {
+        if (window.innerWidth <= 576) {
+            document.querySelectorAll('.customer-card').forEach(card => {
+                card.querySelector('.customer-details').classList.add('small');
+            });
+        } else {
+            document.querySelectorAll('.customer-card').forEach(card => {
+                card.querySelector('.customer-details').classList.remove('small');
+            });
+        }
+    };
+
+    optimizeCustomerCards();
+    window.addEventListener('resize', optimizeCustomerCards);
+
+    // Tablo satırlarına tıklama işlevi ekle - mobil kullanım için satır tıklaması
+    if (window.innerWidth <= 768) {
+        document.querySelectorAll('#customersTable tbody tr').forEach(row => {
+            if (row.cells.length > 1) { // Sonuç yok mesajı satırını atla
+                row.addEventListener('click', function(e) {
+                    // Eğer tıklanan buton değilse detay sayfasına git
+                    if (!e.target.closest('a') && !e.target.closest('button')) {
+                        const detailLink = this.querySelector('a.btn-info');
+                        if (detailLink) {
+                            window.location.href = detailLink.href;
+                        }
+                    }
+                });
+
+                // Tıklanabilir olduğunu belirt
+                row.classList.add('cursor-pointer');
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

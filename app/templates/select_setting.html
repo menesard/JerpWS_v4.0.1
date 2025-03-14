@@ -1,35 +1,343 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ayar Seçimi - Kuyumcu Takip Sistemi</title>
+    <!-- Bootstrap 5.3 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}">
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#212529">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .select-setting-container {
+            max-width: 420px;
+            width: 100%;
+        }
+        
+        .select-setting-card {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .select-setting-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .select-setting-icon {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+        
+        .select-setting-icon i {
+            font-size: 2.5rem;
+            color: white;
+        }
+        
+        .select-setting-title {
+            color: white;
+            font-weight: 300;
+            font-size: 1.8rem;
+            margin: 0;
+        }
+        
+        .select-setting-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+            margin-top: 0.5rem;
+        }
+        
+        .select-setting-body {
+            padding: 2rem;
+        }
 
-{% block title %}Ayar Seçimi - Kuyumcu Takip Sistemi{% endblock %}
-
-{% block content %}
-<div class="row justify-content-center mt-5">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white text-center py-3">
-                <h3 class="mb-0">Ayar Seçimi</h3>
+        .setting-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        
+        .setting-option {
+            display: none;
+        }
+        
+        .setting-option + label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            border-radius: 15px;
+            background-color: #f8f9fa;
+            border: 2px solid #dee2e6;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        
+        .setting-option + label .setting-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .setting-option + label .setting-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        
+        .setting-option:checked + label {
+            background-color: #007bff;
+            border-color: #007bff;
+            color: white;
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+        }
+        
+        .setting-option:checked + label .setting-label {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .setting-option:focus + label {
+            box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.25);
+        }
+        
+        .btn-continue {
+            width: 100%;
+            padding: 0.8rem;
+            font-weight: 500;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border: none;
+            transition: all 0.3s;
+        }
+        
+        .btn-continue:hover, .btn-continue:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
+        }
+        
+        .footer {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .setting-option:disabled + label {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .setting-info {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .setting-info-text {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .setting-animation {
+            animation: fadeInUp 0.5s;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .select-setting-header {
+                padding: 1.5rem;
+            }
+            
+            .select-setting-icon {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .select-setting-icon i {
+                font-size: 2rem;
+            }
+            
+            .select-setting-title {
+                font-size: 1.5rem;
+            }
+            
+            .select-setting-body {
+                padding: 1.5rem;
+            }
+            
+            .select-setting-card {
+                margin-bottom: 1rem;
+            }
+            
+            .setting-option + label {
+                width: 70px;
+                height: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="select-setting-container">
+        <div class="select-setting-card setting-animation">
+            <div class="select-setting-header">
+                <div class="select-setting-icon">
+                    <i class="fas fa-gem"></i>
+                </div>
+                <h1 class="select-setting-title">Kuyumcu Takip Sistemi</h1>
+                <p class="select-setting-subtitle">Lütfen çalışmak istediğiniz ayarı seçin</p>
             </div>
-            <div class="card-body p-4">
-                <p class="text-center mb-4">Lütfen çalışmak istediğiniz ayarı seçin</p>
+            <div class="select-setting-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show mb-4">
+                                <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
 
-                <form method="post">
-                    <div class="mb-4">
-                        <label for="setting" class="form-label">Ayar</label>
-                        <select class="form-select form-select-lg" id="setting" name="setting" required>
-                            {% for setting in settings %}
-                            <option value="{{ setting.name }}">{{ setting.name }}</option>
-                            {% endfor %}
-                        </select>
+                <div class="setting-info">
+                    <p class="setting-info-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Seçtiğiniz ayar, tüm işlemlerde varsayılan olarak kullanılacaktır.
+                    </p>
+                </div>
+
+                <form method="post" id="settingForm">
+                    <div class="setting-options">
+                        {% for setting in settings %}
+                            <input type="radio" class="setting-option" id="setting_{{ setting.name }}" name="setting" value="{{ setting.name }}" {% if loop.first %}checked{% endif %}>
+                            <label for="setting_{{ setting.name }}" class="setting-option-label">
+                                <span class="setting-value">{{ setting.name }}</span>
+                                <span class="setting-label">Ayar</span>
+                            </label>
+                        {% endfor %}
                     </div>
 
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-check me-2"></i>Seç ve Devam Et
+                        <button type="submit" class="btn btn-primary btn-continue">
+                            <i class="fas fa-arrow-right me-2"></i>Seç ve Devam Et
                         </button>
                     </div>
                 </form>
             </div>
         </div>
+        
+        <div class="footer">
+            <p>© 2025 Kuyumcu Takip Sistemi</p>
+        </div>
     </div>
-</div>
-{% endblock %}
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Form gönderme
+            const form = document.getElementById('settingForm');
+            
+            if (form) {
+                form.addEventListener('submit', function(event) {
+                    const selectedOption = document.querySelector('input[name="setting"]:checked');
+                    
+                    if (!selectedOption) {
+                        event.preventDefault();
+                        alert('Lütfen bir ayar seçin.');
+                    } else {
+                        // Gönderme sırasında buton animasyonu
+                        const submitButton = form.querySelector('button[type="submit"]');
+                        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Yönlendiriliyor...';
+                        submitButton.disabled = true;
+                    }
+                });
+            }
+            
+            // Daha güzel seçim deneyimi
+            const settingOptions = document.querySelectorAll('.setting-option');
+            
+            settingOptions.forEach(option => {
+                option.addEventListener('change', function() {
+                    // Diğer seçenekleri sıfırla
+                    settingOptions.forEach(opt => {
+                        const label = document.querySelector(`label[for="${opt.id}"]`);
+                        if (opt !== this) {
+                            label.style.transform = '';
+                        } else {
+                            label.style.transform = 'translateY(-5px)';
+                        }
+                    });
+                });
+            });
+            
+            // Animasyonlu giriş
+            setTimeout(() => {
+                document.querySelector('.select-setting-card').classList.add('show');
+            }, 100);
+            
+            // Otomatik kapanan uyarılar
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    const closeButton = alert.querySelector('.btn-close');
+                    if (closeButton) {
+                        closeButton.click();
+                    }
+                }, 5000); // 5 saniye sonra kapat
+            });
+        });
+    </script>
+</body>
+</html>

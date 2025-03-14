@@ -1,0 +1,191 @@
+/* Mobil Uyumlu Tasarım için Özel CSS */
+
+/* Alt Mobil Navigasyon Çubuğu */
+.mobile-navbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: #ffffff;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    text-decoration: none;
+    padding: 0.5rem;
+    flex: 1;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.mobile-nav-item i {
+    font-size: 1.25rem;
+    margin-bottom: 4px;
+}
+
+.mobile-nav-item span {
+    font-size: 0.7rem;
+}
+
+.mobile-nav-item.active {
+    color: #007bff;
+}
+
+.mobile-nav-item:hover, .mobile-nav-item:focus {
+    color: #0056b3;
+}
+
+/* Mobil Menü Modalı */
+#mobileMenuModal .modal-content {
+    border-radius: 1rem;
+}
+
+#mobileMenuModal .list-group-item {
+    border-left: none;
+    border-right: none;
+    padding: 1rem 1.25rem;
+}
+
+#mobileMenuModal .list-group-item:first-child {
+    border-top: none;
+}
+
+#mobileMenuModal .list-group-item:last-child {
+    border-bottom: none;
+}
+
+/* Mobil için Terazi Göstergesi */
+.weight-display-mobile {
+    font-size: 2.5rem !important;
+}
+
+/* Mobil için Tablolar */
+@media (max-width: 768px) {
+    /* Mobil cihazlar için tablo düzeni */
+    .table-mobile {
+        width: 100%;
+    }
+
+    .table-mobile thead {
+        display: none; /* Başlıkları gizle */
+    }
+
+    .table-mobile tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        background-color: #fff;
+    }
+
+    .table-mobile tbody td {
+        display: block;
+        text-align: right;
+        padding: 0.5rem;
+        position: relative;
+        border-top: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .table-mobile tbody td:last-child {
+        border-bottom: none;
+    }
+
+    .table-mobile tbody td::before {
+        content: attr(data-label);
+        float: left;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+
+    /* Hızlı İşlem Butonları */
+    .quick-actions {
+        position: fixed;
+        bottom: 70px;
+        right: 20px;
+        z-index: 999;
+    }
+
+    .quick-action-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+
+    .quick-action-btn:active {
+        transform: scale(0.95);
+    }
+}
+
+/* Küçük mobil cihazlar için ek düzenlemeler */
+@media (max-width: 375px) {
+    .mobile-nav-item i {
+        font-size: 1.1rem;
+    }
+
+    .mobile-nav-item span {
+        font-size: 0.65rem;
+    }
+
+    .card-title {
+        font-size: 1rem;
+    }
+
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}
+
+/* Dokunmatik Cihazlar için İyileştirmeler */
+@media (hover: none) {
+    /* Butonlar için daha büyük tıklama alanı */
+    .btn {
+        padding: 0.6rem 1rem;
+    }
+
+    /* Form elemanları için daha büyük tıklama alanı */
+    .form-control, .form-select {
+        padding: 0.6rem 0.75rem;
+        min-height: 42px;
+    }
+
+    /* Tıklama durumunda vurgulama */
+    .btn:active, .nav-link:active, .list-group-item:active {
+        transform: scale(0.98);
+    }
+
+    /* Mobil cihazlar için özel gezinme */
+    .swipe-area {
+        position: fixed;
+        top: 60px;
+        bottom: 60px;
+        width: 20px;
+        z-index: 1000;
+    }
+
+    .swipe-area-left {
+        left: 0;
+    }
+
+    .swipe-area-right {
+        right: 0;
+    }
+}
