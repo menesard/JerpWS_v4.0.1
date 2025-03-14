@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+
+{% block title %}İşlem Düzenle - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="border-bottom pb-2">
+                <i class="fas fa-edit me-2"></i>İşlem Düzenle
+            </h2>
+            <div>
+                <a href="{{ url_for('main.transaction_detail', transaction_id=transaction.id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>İşlem Detayına Dön
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Düzenleme Formu -->
+    <div class="col-md-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>İşlem Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="transaction_type" class="form-label">İşlem Tipi *</label>
+                        <select class="form-select" id="transaction_type" name="transaction_type" required>
+                            {% for type in transaction_types %}
+                            <option value="{{ type.value }}" {% if transaction.transaction_type == type.value %}selected{% endif %}>
+                                {{ type.label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">
+                            İşlem tipi gereklidir.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="product_description" class="form-label">Ürün Açıklaması</label>
+                        <input type="text" class="form-control" id="product_description" name="product_description"
+                               value="{{ transaction.product_description or '' }}">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="gram" class="form-label">Gram *</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" min="0.01" class="form-control" id="gram" name="gram"
+                                       value="{{ '%.2f'|format(transaction.gram) }}" required>
+                                <span class="input-group-text">g</span>
+                                <button type="button" id="use-scale" class="btn btn-outline-secondary">
+                                    <i class="fas fa-weight me-1"></i>Teraziden Al
+                                </button>
+                            </div>
+                            <div class="invalid-feedback">
+                                Gram değeri gereklidir.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Ayar</label>
+                            <select class="form-select" id="setting_id" name="setting_id">
+                                {% for setting in settings %}
+                                <option value="{{ setting.id }}" {% if transaction.setting_id == setting.id %}selected{% endif %}
+                                        data-purity="{{ setting.purity_per_thousand }}">
+                                    {{ setting.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="purity_per_thousand" class="form-label">Milyem</label>
+                            <div class="input-group">
+                                <input type="number" step="1" min="1" max="999" class="form-control"
+                                       id="purity_per_thousand" name="purity_per_thousand"
+                                       value="{{ transaction.purity_per_thousand or setting_purity }}">
+                                <span class="input-group-text">‰</span>
+                            </div>
+                            <div class="form-text">
+                                Ayar için varsayılan milyem: <span id="setting_purity">{{ setting_purity }}</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="pure_gold_weight" class="form-label">Has Değeri</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="pure_gold_weight" readonly>
+                                <span class="input-group-text">g</span>
+                            </div>
+                            <div class="form-text">
+                                Has altın = Gram × (Milyem ÷ 1000)
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="labor_percentage" class="form-label">İşçilik Yüzdesi</label>
+                            <div class="input-group">
+                                <input type="number" step="0.1" min="0" class="form-control"
+                                       id="labor_percentage" name="labor_percentage"
+                                       value="{{ transaction.labor_percentage or 0 }}">
+                                <span class="input-group-text">‰</span>
+                            </div>
+                            <div class="form-text" id="labor_pure_gold_text">
+                                İşçilik has karşılığı: {{ transaction.labor_pure_gold or 0 }} g
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notlar</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2">{{ transaction.notes or '' }}</textarea>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Dikkat:</strong> Bu işlemi düzenlediğinizde, orijinal işlem korunacak ve yeni bir işlem kaydı oluşturulacaktır.
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.transaction_detail', transaction_id=transaction.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>İptal
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Değişiklikleri Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terazi Kartı -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-weight me-2"></i>Terazi</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <span class="display-4 fw-bold" id="weight-display">
+                        {{ '%.2f'|format(weight) }}
+                    </span>
+                    <span class="fs-3">g</span>
+                </div>
+                <div class="text-center mb-3">
+                    <span id="weight-status" class="badge {% if weight_valid %}bg-success{% else %}bg-warning{% endif %}">
+                        {% if weight_valid %}Geçerli Okuma{% else %}Son Bilinen Değer{% endif %}
+                    </span>
+                </div>
+                <div class="d-grid">
+                    <a href="{{ url_for('main.tare_scale') }}?redirect={{ request.path|urlencode }}" class="btn btn-outline-primary">
+                        <i class="fas fa-balance-scale me-2"></i>Teraziyi Sıfırla
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Düzenleme Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    <li class="list-group-item">
+                        <p class="small text-muted mb-0">
+                            <strong>Orijinal İşlem Tarihi:</strong><br>
+                            {{ transaction.transaction_date.strftime('%d-%m-%Y %H:%M:%S') }}
+                        </p>
+                    </li>
+                    <li class="list-group-item">
+                        <p class="small text-muted mb-0">
+                            <strong>Düzenleyen:</strong><br>
+                            {{ current_user.username }}
+                        </p>
+                    </li>
+                    <li class="list-group-item">
+                        <p class="small text-muted mb-0">
+                            <strong>Düzenleme Tarihi:</strong><br>
+                            {{ now.strftime('%d-%m-%Y %H:%M:%S') }}
+                        </p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form elemanlarını seçelim
+    const gramInput = document.getElementById('gram');
+    const settingSelect = document.getElementById('setting_id');
+    const purityInput = document.getElementById('purity_per_thousand');
+    const pureGoldOutput = document.getElementById('pure_gold_weight');
+    const laborPercentageInput = document.getElementById('labor_percentage');
+    const laborPureGoldText = document.getElementById('labor_pure_gold_text');
+    const settingPurityText = document.getElementById('setting_purity');
+
+    // Teraziden Al butonu
+    document.getElementById('use-scale').addEventListener('click', function() {
+        fetch('/api/weight')
+            .then(response => {
+                if (response.status === 401) {
+                    window.location.href = "{{ url_for('main.login') }}";
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) {
+                    gramInput.value = data.weight.toFixed(2);
+                    calculatePureGold(); // Değer değiştiğinde has altını güncelle
+                }
+            })
+            .catch(error => {
+                console.error('Ağırlık bilgisi alınamadı:', error);
+            });
+    });
+
+    // Terazi ağırlığını periyodik olarak güncelle
+    function updateWeight() {
+        fetch('/api/weight')
+            .then(response => {
+                if (response.status === 401) {
+                    window.location.href = "{{ url_for('main.login') }}";
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) {
+                    document.getElementById('weight-display').textContent = data.weight.toFixed(2);
+
+                    const weightStatus = document.getElementById('weight-status');
+                    if (data.is_valid) {
+                        weightStatus.textContent = 'Geçerli Okuma';
+                        weightStatus.classList.remove('bg-warning');
+                        weightStatus.classList.add('bg-success');
+                    } else {
+                        weightStatus.textContent = 'Son Bilinen Değer';
+                        weightStatus.classList.remove('bg-success');
+                        weightStatus.classList.add('bg-warning');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Ağırlık bilgisi alınamadı:', error);
+            });
+    }
+
+    // Ayar değiştiğinde milyem değerini güncelle
+    settingSelect.addEventListener('change', function() {
+        const selectedOption = settingSelect.options[settingSelect.selectedIndex];
+        const purity = selectedOption.dataset.purity;
+
+        settingPurityText.textContent = purity;
+        purityInput.value = purity;
+
+        calculatePureGold();
+    });
+
+    // Has değer hesaplama
+    function calculatePureGold() {
+        const gram = parseFloat(gramInput.value) || 0;
+        const purity = parseInt(purityInput.value) || 0;
+        const pureGold = gram * (purity / 1000);
+
+        pureGoldOutput.value = pureGold.toFixed(4);
+
+        // İşçilik has karşılığını da güncelle
+        calculateLaborPureGold();
+    }
+
+    // İşçilik has karşılığı hesaplama
+    function calculateLaborPureGold() {
+        const gram = parseFloat(gramInput.value) || 0;
+        const laborPercentage = parseFloat(laborPercentageInput.value) || 0;
+        const laborPureGold = gram * (laborPercentage / 1000);
+
+        laborPureGoldText.textContent =
+            `İşçilik has karşılığı: ${laborPureGold.toFixed(4)} g`;
+    }
+
+    // İlk yükleme
+    updateWeight();
+
+    // Her 1 saniyede bir güncelle
+    setInterval(updateWeight, 1000);
+
+    // Değerler değiştiğinde hesaplamaları güncelle
+    gramInput.addEventListener('input', calculatePureGold);
+    purityInput.addEventListener('input', calculatePureGold);
+    laborPercentageInput.addEventListener('input', calculateLaborPureGold);
+
+    // Sayfa yüklendiğinde ilk hesaplamaları yap
+    calculatePureGold();
+});
+</script>
+{% endblock %}

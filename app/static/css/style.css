@@ -1,0 +1,83 @@
+/* Ana Stil Dosyası */
+
+/* Sayfa gövdesi */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Footer her zaman altta */
+.footer {
+    margin-top: auto;
+}
+
+/* Kartlar */
+.card {
+    border-radius: 0.5rem;
+    border: none;
+}
+
+.card-header {
+    border-top-left-radius: 0.5rem !important;
+    border-top-right-radius: 0.5rem !important;
+}
+
+/* Tablolar */
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+/* Navbar */
+.navbar-brand {
+    font-weight: 600;
+}
+
+.navbar .setting-form {
+    margin-bottom: 0;
+}
+
+/* Ağırlık göstergesi */
+#weight-display {
+    font-family: 'Roboto Mono', monospace;
+}
+
+/* Bilgi kartları için ikon renkleri */
+.info-card .card-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+/* Form elemanları */
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Baskı için stil */
+@media print {
+    .navbar, .footer, .btn, form, .no-print {
+        display: none !important;
+    }
+
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .card-header {
+        background-color: #f8f9fa !important;
+        color: #000 !important;
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+
+    .table {
+        width: 100% !important;
+    }
+}

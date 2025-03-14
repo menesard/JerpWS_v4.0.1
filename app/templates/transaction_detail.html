@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}İşlem Detay - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="border-bottom pb-2">
+                <i class="fas fa-info-circle me-2"></i>İşlem Detayları
+            </h2>
+            <div>
+                <a href="{{ url_for('main.customer_detail', customer_id=transaction.customer_id) }}" class="btn btn-secondary me-2">
+                    <i class="fas fa-arrow-left me-1"></i>Müşteriye Dön
+                </a>
+                <a href="{{ url_for('main.edit_transaction', transaction_id=transaction.id) }}" class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i>Düzenle
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header {{ 'bg-success text-white' if 'IN' in transaction.transaction_type else 'bg-danger text-white' }}">
+                <h5 class="mb-0">
+                    <i class="fas {{ 'fa-arrow-down' if 'IN' in transaction.transaction_type else 'fa-arrow-up' }} me-2"></i>
+                    {{ transaction_type_tr }}
+                    {% if transaction.is_edited %}
+                    <span class="badge bg-warning text-dark ms-2">Düzenlenmiş İşlem</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">İşlem Tarihi:</dt>
+                            <dd class="col-sm-8">{{ transaction.transaction_date.strftime('%d-%m-%Y %H:%M:%S') }}</dd>
+
+                            <dt class="col-sm-4">Müşteri:</dt>
+                            <dd class="col-sm-8">
+                                <a href="{{ url_for('main.customer_detail', customer_id=transaction.customer_id) }}">
+                                    {{ customer.name }}
+                                </a>
+                            </dd>
+
+                            <dt class="col-sm-4">Ürün Açıklaması:</dt>
+                            <dd class="col-sm-8">{{ transaction.product_description or '-' }}</dd>
+
+                            <dt class="col-sm-4">Ayar:</dt>
+                            <dd class="col-sm-8">{{ transaction.setting.name }}</dd>
+
+                            <dt class="col-sm-4">İşlemi Yapan:</dt>
+                            <dd class="col-sm-8">{{ transaction.created_by.username if transaction.created_by else "-" }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Gram:</dt>
+                            <dd class="col-sm-8">{{ transaction.gram }} g</dd>
+
+                            <dt class="col-sm-4">Milyem:</dt>
+                            <dd class="col-sm-8">{{ transaction.purity_per_thousand or '-' }}</dd>
+
+                            <dt class="col-sm-4">Has Değeri:</dt>
+                            <dd class="col-sm-8">{{ transaction.pure_gold_weight or '-' }} g</dd>
+
+                            <dt class="col-sm-4">İşçilik Yüzdesi:</dt>
+                            <dd class="col-sm-8">{{ transaction.labor_percentage or '0' }} ‰</dd>
+
+                            <dt class="col-sm-4">İşçilik Has Karşılığı:</dt>
+                            <dd class="col-sm-8">{{ transaction.labor_pure_gold or '0' }} g</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                {% if transaction.notes %}
+                <div class="mt-3 p-3 bg-light rounded">
+                    <h6 class="mb-2"><i class="fas fa-sticky-note me-2"></i>Notlar</h6>
+                    <p class="mb-0">{{ transaction.notes }}</p>
+                </div>
+                {% endif %}
+
+                {% if transaction.is_edited %}
+                <div class="mt-3 p-3 bg-warning bg-opacity-10 rounded">
+                    <h6 class="mb-2"><i class="fas fa-edit me-2"></i>Düzenleme Bilgileri</h6>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Düzenlenme Tarihi:</dt>
+                        <dd class="col-sm-9">{{ transaction.edited_date.strftime('%d-%m-%Y %H:%M:%S') }}</dd>
+
+                        <dt class="col-sm-3">Düzenleyen:</dt>
+                        <dd class="col-sm-9">{{ transaction.edited_by.username }}</dd>
+
+                        <dt class="col-sm-3">Orijinal İşlem:</dt>
+                        <dd class="col-sm-9">
+                            <a href="{{ url_for('main.transaction_detail', transaction_id=transaction.original_transaction_id) }}">
+                                Orijinal İşlemi Görüntüle
+                            </a>
+                        </dd>
+                    </dl>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>İşlem Geçmişi</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for history_item in transaction_history %}
+                    <a href="{{ url_for('main.transaction_detail', transaction_id=history_item.id) }}"
+                       class="list-group-item list-group-item-action {% if history_item.id == transaction.id %}active{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                {% if history_item.is_edited %}
+                                <i class="fas fa-edit me-1"></i>Düzenleme
+                                {% else %}
+                                <i class="fas fa-file-alt me-1"></i>Orijinal İşlem
+                                {% endif %}
+                            </h6>
+                            <small>{{ history_item.transaction_date.strftime('%d-%m-%Y %H:%M:%S') }}</small>
+                        </div>
+                        <p class="mb-1">{{ history_item.gram }} g {{ history_item.setting.name }} ayar</p>
+                        <small class="text-muted">
+                            Has: {{ history_item.pure_gold_weight or '0' }} g |
+                            İşçilik Has: {{ history_item.labor_pure_gold or '0' }} g
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

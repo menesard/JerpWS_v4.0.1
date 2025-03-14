@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Ayarlar - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="border-bottom pb-2"><i class="fas fa-cog me-2"></i>Ayarlar</h2>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Şifre Değiştirme -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-lock me-2"></i>Şifre Değiştir</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <input type="hidden" name="change_password" value="1">
+
+                    <div class="mb-3">
+                        <label for="old_password" class="form-label">Mevcut Şifre</label>
+                        <input type="password" class="form-control" id="old_password" name="old_password" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">Yeni Şifre</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Yeni Şifre (Tekrar)</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Şifreyi Değiştir
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terazi Ayarları -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-weight me-2"></i>Terazi Ayarları</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert {% if scale_connected %}alert-success{% else %}alert-warning{% endif %} mb-3">
+                    <i class="fas {% if scale_connected %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %} me-2"></i>
+                    {% if scale_connected %}
+                        Terazi bağlantısı aktif.
+                    {% else %}
+                        Terazi bağlantısı yok, simülasyon modu aktif.
+                    {% endif %}
+                </div>
+
+                <form method="post">
+                    <input type="hidden" name="scale_settings" value="1">
+
+                    <div class="mb-3">
+                        <label for="scale_port" class="form-label">Seri Port</label>
+                        <input type="text" class="form-control" id="scale_port" name="scale_port" value="{{ scale_port }}" required>
+                        <div class="form-text">
+                            Terazinin bağlı olduğu seri port (örn. COM5, /dev/ttyUSB0)
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="simulation_mode" name="simulation_mode" {% if scale_simulation %}checked{% endif %}>
+                        <label class="form-check-label" for="simulation_mode">Simülasyon Modu</label>
+                        <div class="form-text">
+                            Gerçek terazi olmadığında rastgele değerler üretir.
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Ayarları Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sistem Bilgileri -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Sistem Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Uygulama Sürümü:</dt>
+                            <dd class="col-sm-8">v1.0.0</dd>
+
+                            <dt class="col-sm-4">Sunucu Adresi:</dt>
+                            <dd class="col-sm-8">{{ request.host }}</dd>
+
+                            <dt class="col-sm-4">Aktif Kullanıcı:</dt>
+                            <dd class="col-sm-8">{{ current_user.username }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Veritabanı:</dt>
+                            <dd class="col-sm-8">SQLite</dd>
+
+                            <dt class="col-sm-4">Terazi Durum:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge {% if scale_connected %}bg-success{% else %}bg-warning{% endif %}">
+                                    {% if scale_connected %}Bağlı{% else %}Simülasyon{% endif %}
+                                </span>
+                            </dd>
+
+                            <dt class="col-sm-4">Seçili Ayar:</dt>
+                            <dd class="col-sm-8">{{ session.get('selected_setting', 'Seçilmedi') }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+# Kuyumcu Takip Sistemi Güncelleme Rehberi
+
+Bu rehber, Kuyumcu Takip Sistemi'ne has değer ve işçilik hesaplamaları eklemek için yapılması gereken adımları içerir.
+
+## Güncelleme Adımları
+
+### 1. Veritabanı Değişiklikleri
+
+1. `app/models/database.py` dosyasını güncelle:
+   - `Setting` sınıfına `purity_per_thousand` alanını ekle
+   - `CustomerTransaction` sınıfına has değer hesaplamaları için gerekli alanları ekle
+   - `init_db()` fonksiyonunu güncelle (ayar ve milyem değerleri)
+
+2. Veritabanı migration dosyasını oluştur:
+   ```bash
+   flask db migrate -m "Add pure gold and labor calculations fields"
+   ```
+
+3. Migrationları uygula:
+   ```bash
+   flask db upgrade
+   ```
+
+### 2. SystemManager Değişiklikleri
+
+1. `app/models/system_manager.py` dosyasını güncelle:
+   - Has değer hesaplama fonksiyonlarını ekle
+   - Müşteri işlemi ekleme fonksiyonunu güncelle
+   - Müşteri has bakiyesi hesaplama fonksiyonunu ekle
+   - Müşteri işlemleri listeleme fonksiyonunu güncelle
+
+### 3. Rota Değişiklikleri
+
+1. `app/routes/views.py` dosyasını güncelle:
+   - Müşteri detay sayfası için has bakiye bilgisini ekle
+   - Müşteri işlemi ekleme sayfası için has değer hesaplama parametrelerini ekle
+
+2. `app/routes/api.py` dosyasını güncelle:
+   - Has değer hesaplama API endpoint'lerini ekle
+   - Milyem değeri sorgulama endpoint'ini ekle
+   - Müşteri has bakiyesi endpoint'ini ekle
+   - Müşteri işlemi ekleme API'sini güncelle
+
+### 4. Şablon Değişiklikleri
+
+1. `app/templates/customer_detail.html` şablonunu güncelle:
+   - Has bakiye gösterimi için kart ekle
+   - İşlem tablosuna has değer sütunları ekle
+
+2. `app/templates/customer_transaction_form.html` şablonunu güncelle:
+   - Milyem değeri ve has değer hesaplama alanları ekle
+   - İşçilik yüzdesi ve has karşılığı alanları ekle
+   - JavaScript ile hesaplama fonksiyonları ekle
+
+## Test Etme
+
+Tüm değişiklikleri uyguladıktan sonra, aşağıdaki testleri yapın:
+
+1. Ayarları kontrol edin - her ayar için doğru milyem değerinin görüntülendiğinden emin olun
+2. Yeni bir müşteri ekleyin
+3. Müşteriye farklı işlemler ekleyin:
+   - Varsayılan milyem değeri ile işlem
+   - Değiştirilmiş milyem değeri ile işlem
+   - İşçilik yüzdesi ekleyerek işlem
+4. Müşteri bakiye sayfasında has bakiye bilgilerinin doğru görüntülendiğini kontrol edin
+5. API üzerinden has değer hesaplamaları yapın
+
+## Notlar
+
+- Milyem (‰) değeri, altının saflık derecesini gösterir (1000 = saf altın)
+- Has değer = Gram × (Milyem ÷ 1000)
+- İşçilik has karşılığı = Gram × (İşçilik Yüzdesi ÷ 1000)
+- Ayarlar ve varsayılan milyem değerleri:
+  - 8 ayar: 333‰
+  - 14 ayar: 585‰
+  - 18 ayar: 750‰
+  - 21 ayar: 875‰
+  - 22 ayar: 916‰
+
+Bu değerleri işyerinizin uygulamalarına göre düzenleyebilirsiniz.

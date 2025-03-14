@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Kullanıcı Düzenle - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="border-bottom pb-2"><i class="fas fa-user-edit me-2"></i>Kullanıcı Düzenle</h2>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user-edit me-2"></i>{{ user.username }} Kullanıcı Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Kullanıcı Adı</label>
+                        <input type="text" class="form-control" id="username" value="{{ user.username }}" disabled>
+                        <div class="form-text">
+                            Kullanıcı adı değiştirilemez.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Yeni Şifre</label>
+                        <input type="password" class="form-control" id="password" name="password">
+                        <div class="form-text">
+                            Şifre değiştirmek istemiyorsanız boş bırakın.
+                        </div>
+                    </div>
+
+                    {% if current_user.id != user.id and (current_user.is_admin or (current_user.role == 'manager' and user.role == 'staff')) %}
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Kullanıcı Rolü</label>
+                        <select class="form-select" id="role" name="role">
+                            <option value="staff" {% if user.role == 'staff' %}selected{% endif %}>Görevli</option>
+                            <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>Yönetici</option>
+                            {% if current_user.is_admin %}
+                            <option value="admin" {% if user.is_admin %}selected{% endif %}>Admin</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.users') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Geri
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Değişiklikleri Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ user.username }} İşlemleri - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="border-bottom pb-2">
+                <i class="fas fa-history me-2"></i>{{ user.username }} Kullanıcı İşlemleri
+            </h2>
+            <a href="{{ url_for('main.users') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Kullanıcılara Dön
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-list-alt me-2"></i>Son 20 İşlem</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Zaman</th>
+                                <th>İşlem</th>
+                                <th>Kaynak</th>
+                                <th>Hedef</th>
+                                <th>Ayar</th>
+                                <th>Gram</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for operation in operations %}
+                            <tr>
+                                <td>{{ operation.timestamp.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                                <td>
+                                    <span class="badge {% if operation.operation_type == 'ADD' %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ 'EKLEME' if operation.operation_type == 'ADD' else 'ÇIKARMA' }}
+                                    </span>
+                                </td>
+                                <td>{{ operation.source_region.name if operation.source_region else "-" }}</td>
+                                <td>{{ operation.target_region.name if operation.target_region else "-" }}</td>
+                                <td>{{ operation.setting.name }}</td>
+                                <td>{{ operation.gram }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">Bu kullanıcı henüz işlem yapmamış</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}İşlemler - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="border-bottom pb-2"><i class="fas fa-balance-scale me-2"></i>Manuel İşlemler</h2>
+    </div>
+</div>
+
+<div class="row">
+    <!-- İşlem Formu -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>İşlem Formu</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label">İşlem Tipi</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="operation_type" id="operation_add" value="add" checked>
+                            <label class="btn btn-outline-success" for="operation_add">
+                                <i class="fas fa-plus me-1"></i>Ekle
+                            </label>
+
+                            <input type="radio" class="btn-check" name="operation_type" id="operation_subtract" value="subtract">
+                            <label class="btn btn-outline-danger" for="operation_subtract">
+                                <i class="fas fa-minus me-1"></i>Çıkar
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="region" class="form-label">Bölge</label>
+                        <select class="form-select" id="region" name="region">
+                            {% for region in regions %}
+                            <option value="{{ region.name }}">{{ region.name_tr|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="gram" class="form-label">Gram</label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" min="0.01" class="form-control" id="gram" name="gram" value="{{ '%.2f'|format(weight) }}" required>
+                            <span class="input-group-text">g</span>
+                            <button type="button" id="use-scale" class="btn btn-outline-secondary">
+                                <i class="fas fa-weight me-1"></i>Teraziden Al
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-check-circle me-2"></i>İşlemi Gerçekleştir
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terazi ve Bilgi Kartı -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-weight me-2"></i>Terazi</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <span class="display-4 fw-bold" id="weight-display">
+                        {{ '%.2f'|format(weight) }}
+                    </span>
+                    <span class="fs-3">g</span>
+                </div>
+                <div class="text-center mb-3">
+                    <span id="weight-status" class="badge {% if weight_valid %}bg-success{% else %}bg-warning{% endif %}">
+                        {% if weight_valid %}Geçerli Okuma{% else %}Son Bilinen Değer{% endif %}
+                    </span>
+                </div>
+                <div class="d-grid">
+                    <a href="{{ url_for('main.tare_scale') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-balance-scale me-2"></i>Teraziyi Sıfırla
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>İşlem Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-gem me-2"></i>Seçili Ayar:</span>
+                        <span class="badge bg-primary">{{ selected_setting }}</span>
+                    </li>
+                    <li class="list-group-item">
+                        <h6><i class="fas fa-info-circle me-2"></i>Bilgilendirme</h6>
+                        <p class="small text-muted mb-0">
+                            İşlemler, belirtilen bölge ve gram değerine göre gerçekleştirilir.
+                            Teraziden ölçüm almak için "Teraziden Al" butonunu kullanabilirsiniz.
+                        </p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // URL parametrelerini kontrol et
+    const urlParams = new URLSearchParams(window.location.search);
+    const regionParam = urlParams.get('region');
+    const operationParam = urlParams.get('operation');
+
+    // Varsa, form değerlerini güncelle
+    if (regionParam) {
+        document.getElementById('region').value = regionParam;
+    }
+
+    if (operationParam) {
+        if (operationParam === 'add') {
+            document.getElementById('operation_add').checked = true;
+        } else if (operationParam === 'subtract') {
+            document.getElementById('operation_subtract').checked = true;
+        }
+    }
+
+    // Teraziden Al butonu
+    document.getElementById('use-scale').addEventListener('click', function() {
+        fetch('/api/weight')
+            .then(response => {
+                if (response.status === 401) {
+                    window.location.href = "{{ url_for('main.login') }}";
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) {
+                    document.getElementById('gram').value = data.weight.toFixed(2);
+                }
+            })
+            .catch(error => {
+                console.error('Ağırlık bilgisi alınamadı:', error);
+            });
+    });
+
+    // Terazi ağırlığını periyodik olarak güncelle
+    function updateWeight() {
+        fetch('/api/weight')
+            .then(response => {
+                if (response.status === 401) {
+                    window.location.href = "{{ url_for('main.login') }}";
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) {
+                    document.getElementById('weight-display').textContent = data.weight.toFixed(2);
+
+                    const weightStatus = document.getElementById('weight-status');
+                    if (data.is_valid) {
+                        weightStatus.textContent = 'Geçerli Okuma';
+                        weightStatus.classList.remove('bg-warning');
+                        weightStatus.classList.add('bg-success');
+                    } else {
+                        weightStatus.textContent = 'Son Bilinen Değer';
+                        weightStatus.classList.remove('bg-success');
+                        weightStatus.classList.add('bg-warning');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Ağırlık bilgisi alınamadı:', error);
+            });
+    }
+
+    // İlk yükleme
+    updateWeight();
+
+    // Her 1 saniyede bir güncelle
+    setInterval(updateWeight, 1000);
+});
+</script>
+{% endblock %}

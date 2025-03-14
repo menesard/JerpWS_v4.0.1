@@ -1,0 +1,1 @@
+# Donanım bağlantıları için paket

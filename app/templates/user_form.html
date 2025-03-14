@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Yeni Kullanıcı - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="border-bottom pb-2"><i class="fas fa-user-plus me-2"></i>Yeni Kullanıcı Ekle</h2>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user-edit me-2"></i>Kullanıcı Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Kullanıcı Adı *</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                        <div class="invalid-feedback">
+                            Kullanıcı adı gereklidir.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Şifre *</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="invalid-feedback">
+                            Şifre gereklidir.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Şifre (Tekrar) *</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        <div class="invalid-feedback">
+                            Şifre tekrarı gereklidir.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Kullanıcı Rolü *</label>
+                        <select class="form-select" id="role" name="role" required>
+                            <option value="staff">Görevli</option>
+                            <option value="manager">Yönetici</option>
+                            {% if current_user.is_admin %}
+                            <option value="admin">Admin</option>
+                            {% endif %}
+                        </select>
+                        <div class="form-text">
+                            <strong>Görevli:</strong> Sadece atölye içi işlem yapabilir.<br>
+                            <strong>Yönetici:</strong> Müşteri, hesap, görevli kullanıcı işlemleri yapabilir.<br>
+                            {% if current_user.is_admin %}
+                            <strong>Admin:</strong> Sistem üzerinde tam yetkiye sahiptir.
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.users') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Geri
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

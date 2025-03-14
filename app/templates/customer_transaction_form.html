@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+
+{% block title %}Yeni İşlem - {{ customer.name }} - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="border-bottom pb-2">
+            <i class="fas fa-exchange-alt me-2"></i>Yeni Müşteri İşlemi
+        </h2>
+        <p class="text-muted">Müşteri: {{ customer.name }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- İşlem Formu -->
+    <div class="col-md-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>İşlem Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="transaction_type" class="form-label">İşlem Tipi *</label>
+                        <select class="form-select" id="transaction_type" name="transaction_type" required>
+                            <option value="" selected disabled>İşlem seçin...</option>
+                            {% for type in transaction_types %}
+                            <option value="{{ type.value }}">{{ type.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback">
+                            İşlem tipi gereklidir.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="product_description" class="form-label">Ürün Açıklaması</label>
+                        <input type="text" class="form-control" id="product_description" name="product_description">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="gram" class="form-label">Gram *</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" min="0.01" class="form-control" id="gram" name="gram" value="{{ '%.2f'|format(weight) }}" required>
+                                <span class="input-group-text">g</span>
+                                <button type="button" id="use-scale" class="btn btn-outline-secondary">
+                                    <i class="fas fa-weight me-1"></i>Teraziden Al
+                                </button>
+                            </div>
+                            <div class="invalid-feedback">
+                                Gram değeri gereklidir.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Ayar</label>
+                            <input type="text" class="form-control" value="{{ selected_setting }}" id="setting_display" readonly>
+                            <div class="form-text">
+                                Ayar değiştirmek için üst menüyü kullanın.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="purity_per_thousand" class="form-label">Milyem</label>
+                            <div class="input-group">
+                                <input type="number" step="1" min="1" max="999" class="form-control"
+                                       id="purity_per_thousand" name="purity_per_thousand"
+                                       value="{{ setting_purity }}">
+                                <span class="input-group-text">‰</span>
+                            </div>
+                            <div class="form-text">
+                                Ayar için varsayılan milyem: {{ setting_purity }}
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="pure_gold_weight" class="form-label">Has Değeri</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="pure_gold_weight" readonly>
+                                <span class="input-group-text">g</span>
+                            </div>
+                            <div class="form-text">
+                                Has altın = Gram × (Milyem ÷ 1000)
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="labor_percentage" class="form-label">İşçilik Yüzdesi</label>
+                            <div class="input-group">
+                                <input type="number" step="0.1" min="0" class="form-control"
+                                       id="labor_percentage" name="labor_percentage" value="0">
+                                <span class="input-group-text">‰</span>
+                            </div>
+                            <div class="form-text" id="labor_pure_gold_text">
+                                İşçilik has karşılığı: 0.0000 g
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TL cinsindeki alanlar kaldırıldı -->
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notlar</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('main.customer_detail', customer_id=customer.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Geri
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>İşlemi Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terazi Kartı -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-weight me-2"></i>Terazi</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <span class="display-4 fw-bold" id="weight-display">
+                        {{ '%.2f'|format(weight) }}
+                    </span>
+                    <span class="fs-3">g</span>
+                </div>
+                <div class="text-center mb-3">
+                    <span id="weight-status" class="badge {% if weight_valid %}bg-success{% else %}bg-warning{% endif %}">
+                        {% if weight_valid %}Geçerli Okuma{% else %}Son Bilinen Değer{% endif %}
+                    </span>
+                </div>
+                <div class="d-grid">
+                    <a href="{{ url_for('main.tare_scale') }}?redirect={{ request.path|urlencode }}" class="btn btn-outline-primary">
+                        <i class="fas fa-balance-scale me-2"></i>Teraziyi Sıfırla
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Bilgilendirme</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    <li class="list-group-item">
+                        <p class="small text-muted mb-0">
+                            <strong>Milyem:</strong> Altının saflık derecesi (‰). {{ selected_setting }} ayar için varsayılan değer: {{ setting_purity }} (1000 = saf altın)
+                        </p>
+                    </li>
+                    <li class="list-group-item">
+                        <p class="small text-muted mb-0">
+                            <strong>Has Değeri:</strong> Altının içindeki saf altın miktarı (gram)
+                        </p>
+                    </li>
+                    <li class="list-group-item">
+                        <p class="small text-muted mb-0">
+                            <strong>İşçilik Yüzdesi:</strong> İşçilik için alınan has karşılığı (milyem)
+                        </p>
+                    </li>
+                    <li class="list-group-item">
+                        <p class="small text-muted mb-0">
+                            <strong>Örnek:</strong> 10 gr 22 ayar (916‰) altının has değeri: 9.16 gr
+                        </p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form elemanlarını seçelim
+    const gramInput = document.getElementById('gram');
+    const purityInput = document.getElementById('purity_per_thousand');
+    const pureGoldOutput = document.getElementById('pure_gold_weight');
+    const laborPercentageInput = document.getElementById('labor_percentage');
+    const laborPureGoldText = document.getElementById('labor_pure_gold_text');
+
+    // Teraziden Al butonu
+    document.getElementById('use-scale').addEventListener('click', function() {
+        fetch('/api/weight')
+            .then(response => {
+                if (response.status === 401) {
+                    window.location.href = "{{ url_for('main.login') }}";
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) {
+                    gramInput.value = data.weight.toFixed(2);
+                    calculatePureGold(); // Değer değiştiğinde has altını güncelle
+                }
+            })
+            .catch(error => {
+                console.error('Ağırlık bilgisi alınamadı:', error);
+            });
+    });
+
+    // Terazi ağırlığını periyodik olarak güncelle
+    function updateWeight() {
+        fetch('/api/weight')
+            .then(response => {
+                if (response.status === 401) {
+                    window.location.href = "{{ url_for('main.login') }}";
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) {
+                    document.getElementById('weight-display').textContent = data.weight.toFixed(2);
+
+                    const weightStatus = document.getElementById('weight-status');
+                    if (data.is_valid) {
+                        weightStatus.textContent = 'Geçerli Okuma';
+                        weightStatus.classList.remove('bg-warning');
+                        weightStatus.classList.add('bg-success');
+                    } else {
+                        weightStatus.textContent = 'Son Bilinen Değer';
+                        weightStatus.classList.remove('bg-success');
+                        weightStatus.classList.add('bg-warning');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Ağırlık bilgisi alınamadı:', error);
+            });
+    }
+
+    // İlk yükleme
+    updateWeight();
+
+    // Her 1 saniyede bir güncelle
+    setInterval(updateWeight, 1000);
+
+    // Has değer hesaplama
+    function calculatePureGold() {
+        const gram = parseFloat(gramInput.value) || 0;
+        const purity = parseInt(purityInput.value) || 0;
+        const pureGold = gram * (purity / 1000);
+
+        pureGoldOutput.value = pureGold.toFixed(4);
+
+        // İşçilik has karşılığını da güncelle
+        calculateLaborPureGold();
+    }
+
+    // İşçilik has karşılığı hesaplama
+    function calculateLaborPureGold() {
+        const gram = parseFloat(gramInput.value) || 0;
+        const laborPercentage = parseFloat(laborPercentageInput.value) || 0;
+        const laborPureGold = gram * (laborPercentage / 1000);
+
+        laborPureGoldText.textContent =
+            `İşçilik has karşılığı: ${laborPureGold.toFixed(4)} g`;
+    }
+
+    // Değerler değiştiğinde hesaplamaları güncelle
+    gramInput.addEventListener('input', calculatePureGold);
+    purityInput.addEventListener('input', calculatePureGold);
+    laborPercentageInput.addEventListener('input', calculateLaborPureGold);
+
+    // Sayfa yüklendiğinde ilk hesaplamaları yap
+    calculatePureGold();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}Gösterge Paneli - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="border-bottom pb-2"><i class="fas fa-tachometer-alt me-2"></i>Gösterge Paneli</h2>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Terazi Kartı -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-weight me-2"></i>Terazi</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <span class="display-1 fw-bold" id="weight-display">
+                        {{ '%.2f'|format(weight) }}
+                    </span>
+                    <span class="fs-2">g</span>
+                </div>
+                <div class="text-center mb-3">
+                    <span id="weight-status" class="badge {% if weight_valid %}bg-success{% else %}bg-warning{% endif %}">
+                        {% if weight_valid %}Geçerli Okuma{% else %}Son Bilinen Değer{% endif %}
+                    </span>
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('main.tare_scale') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-balance-scale me-2"></i>Teraziyi Sıfırla
+                    </a>
+                    <a href="{{ url_for('main.operations') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-exchange-alt me-2"></i>İşlem Yap
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Genel Bakış Kartı -->
+    <div class="col-md-8 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Genel Bakış ({{ selected_setting }} Ayar)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Zaman</th>
+                                <th>İşlem</th>
+                                <th>Kaynak</th>
+                                <th>Hedef</th>
+                                <th>Ayar</th>
+                                <th>Gram</th>
+                                <th>Kullanıcı</th>  <!-- Yeni eklenen sütun -->
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.time }}</td>
+                                <td>
+                                    <span class="badge {% if log.operation_type == 'ADD' %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ log.operation_type_tr }}
+                                    </span>
+                                </td>
+                                <td>{{ log.source_region_tr }}</td>
+                                <td>{{ log.target_region_tr }}</td>
+                                <td>{{ log.setting }}</td>
+                                <td>{{ log.gram }}</td>
+                                <td>{{ log.username }}</td>  <!-- Yeni eklenen kullanıcı bilgisi -->
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">Henüz işlem kaydı bulunmuyor</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Son İşlemler -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Son İşlemler</h5>
+                <a href="{{ url_for('main.history') }}" class="btn btn-sm btn-light">
+                    <i class="fas fa-external-link-alt me-1"></i>Tüm Geçmiş
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Zaman</th>
+                                <th>İşlem</th>
+                                <th>Kaynak</th>
+                                <th>Hedef</th>
+                                <th>Ayar</th>
+                                <th>Gram</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.time }}</td>
+                                <td>
+                                    <span class="badge {% if log.operation_type == 'ADD' %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ 'EKLEME' if log.operation_type == 'ADD' else 'ÇIKARMA' }}
+                                    </span>
+                                </td>
+                                <td>{{ change_region_tr(log.source_region) }}</td>
+                                <td>{{ change_region_tr(log.target_region) }}</td>
+                                <td>{{ log.setting }}</td>
+                                <td>{{ log.gram }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">Henüz işlem kaydı bulunmuyor</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function updateWeight() {
+        fetch('/api/weight')
+            .then(response => {
+                if (response.status === 401) {
+                    // Oturum sonlandıysa login sayfasına yönlendir
+                    window.location.href = "{{ url_for('main.login') }}";
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) {
+                    // Ağırlık göstergesini güncelle
+                    document.getElementById('weight-display').textContent = data.weight.toFixed(2);
+
+                    // Durum etiketini güncelle
+                    const weightStatus = document.getElementById('weight-status');
+                    if (data.is_valid) {
+                        weightStatus.textContent = 'Geçerli Okuma';
+                        weightStatus.classList.remove('bg-warning');
+                        weightStatus.classList.add('bg-success');
+                    } else {
+                        weightStatus.textContent = 'Son Bilinen Değer';
+                        weightStatus.classList.remove('bg-success');
+                        weightStatus.classList.add('bg-warning');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Veri alınamadı:', error);
+            });
+    }
+
+    // İlk yükleme
+    updateWeight();
+
+    // Her 0.5 saniyede bir güncelle
+    setInterval(updateWeight, 500);
+});
+</script>
+{% endblock %}
