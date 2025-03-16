@@ -121,8 +121,14 @@ class CustomerTransaction(db.Model):
     labor_percentage = db.Column(db.Float, default=0)  # İşçilik yüzdesi (%)
     labor_pure_gold = db.Column(db.Float, default=0)  # İşçilik has altın karşılığı
     notes = db.Column(db.Text)
+    used_in_transfer = db.Column(db.Boolean, default=False)  # Devirde kullanıldı mı
+    transfer_id = db.Column(db.Integer, db.ForeignKey('transfers.id'), nullable=True)
+
 
     # Düzenleme ile ilgili yeni alanlar
+    customer = db.relationship('Customer', backref='transactions')
+    setting = db.relationship('Setting')
+    transfer = db.relationship('Transfer', backref='transactions')
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     created_by = db.relationship('User', foreign_keys=[created_by_user_id])
     is_edited = db.Column(db.Boolean, default=False)  # Düzenlenip düzenlenmediği
@@ -174,7 +180,6 @@ def init_db():
             )
             db.session.add(region)
 
-    # Ayarlar ve milyem değerleri
     settings_data = [
         {'name': '8', 'purity_per_thousand': 333},
         {'name': '14', 'purity_per_thousand': 585},

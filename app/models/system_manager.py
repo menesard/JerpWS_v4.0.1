@@ -277,7 +277,8 @@ class SystemManager:
     @staticmethod
     def add_customer_transaction(customer_id, transaction_type, setting_name, gram,
                                  product_description=None, unit_price=None, labor_cost=0,
-                                 purity_per_thousand=None, labor_percentage=0, notes=None, user_id=None):
+                                 purity_per_thousand=None, labor_percentage=0, notes=None, user_id=None,
+                                 used_in_transfer=False, transfer_id=None):
         """Müşteri işlemi ekle - has değer hesaplamalı ve kasaya etkili"""
         customer = Customer.query.get(customer_id)
         setting = SystemManager.get_setting_with_purity(setting_name)
@@ -315,7 +316,8 @@ class SystemManager:
             labor_pure_gold=labor_pure_gold,
             notes=notes,
             created_by_user_id=user_id,
-            used_in_transfer=False  # Devir hesaplamada kullanılmadı
+            used_in_transfer=used_in_transfer,
+            transfer_id=transfer_id
         )
 
         db.session.add(transaction)
@@ -1003,3 +1005,31 @@ class SystemManager:
             query = query.filter(DailyVault.date <= end_date)
 
         return query.order_by(DailyVault.date.desc()).all()
+
+    @staticmethod
+    def get_region_status(region_name, setting_name):
+        """Belirli bir bölgedeki belirli bir ayarın stok durumunu hesapla"""
+        region = Region.query.filter_by(name=region_name).first()
+        setting = Setting.query.filter_by(name=setting_name).first()
+
+        if not region or not setting:
+            return {setting_name: 0}
+
+        # Eklenen toplam
+        added = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
+            Operation.target_region_id == region.id,
+            Operation.setting_id == setting.id,
+            Operation.operation_type == OPERATION_ADD
+        ).scalar()
+
+        # Çıkarılan toplam
+        subtracted = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
+            Operation.source_region_id == region.id,
+            Operation.setting_id == setting.id,
+            Operation.operation_type == OPERATION_SUBTRACT
+        ).scalar()
+
+        # Net stok miktarını hesapla
+        net_stock = float(added - subtracted)
+
+        return {setting_name: net_stock}
