@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}Günlük Kasa - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-cash-register me-2"></i>Günlük Kasa Kontrolü
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.daily_vault_history') }}" class="btn btn-info me-2">
+                    <i class="fas fa-history me-1"></i><span class="d-none d-md-inline-block">Kasa Geçmişi</span>
+                </a>
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneline Dön</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Beklenen Kasa Durumu -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Beklenen Kasa Durumu</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0" id="expected-vault-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ayar</th>
+                                <th>Gram</th>
+                                <th>Has Değer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for setting_id, setting_data in expected_data.details.items() %}
+                            <tr>
+                                <td>{{ setting_data.setting.name }}</td>
+                                <td>{{ setting_data.gram|round(2) }} g</td>
+                                <td>{{ (setting_data.gram * setting_data.setting.purity_per_thousand / 1000)|round(4) }} g</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Kasada altın bulunmuyor
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <td colspan="1" class="fw-bold text-end">Toplam:</td>
+                                <td class="fw-bold">{{ expected_data.total|round(2) }} g</td>
+                                <td>-</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kasa Kontrol Formu -->
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Kasa Kontrolü</h5>
+            </div>
+            <div class="card-body">
+                {% if today_record %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Bilgi:</strong> Bugün için zaten kasa kontrolü yapılmış. Geçmiş kayıtları görüntülemek için
+                    <a href="{{ url_for('main.daily_vault_history') }}" class="alert-link">Kasa Geçmişi</a> sayfasına gidebilirsiniz.
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted mb-1">Kontrol Tarihi:</h6>
+                        <p class="mb-0">{{ today_record.date.strftime('%d-%m-%Y') }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted mb-1">İşlemi Yapan:</h6>
+                        <p class="mb-0">{{ today_record.user.username }}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <h6 class="text-muted mb-1">Beklenen Toplam:</h6>
+                        <p class="mb-0">{{ today_record.expected_total|round(2) }} g</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <h6 class="text-muted mb-1">Gerçek Toplam:</h6>
+                        <p class="mb-0">{{ today_record.actual_total|round(2) }} g</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <h6 class="text-muted mb-1">Fark:</h6>
+                        <p class="mb-0 {{ 'text-danger' if today_record.difference < 0 else 'text-success' if today_record.difference > 0 else '' }}">
+                            {{ today_record.difference|round(2) }} g
+                        </p>
+                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('main.daily_vault_detail', vault_id=today_record.id) }}" class="btn btn-primary">
+                        <i class="fas fa-eye me-1"></i>Detayları Görüntüle
+                    </a>
+                    <a href="{{ url_for('main.daily_vault_history') }}" class="btn btn-info">
+                        <i class="fas fa-history me-1"></i>Kasa Geçmişi
+                    </a>
+                </div>
+                {% else %}
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label">Mevcut Kasa Durumunu Giriniz</label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Ayar</th>
+                                        <th>Beklenen (g)</th>
+                                        <th>Gerçek (g)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for setting_id, setting_data in expected_data.details.items() %}
+                                    <tr>
+                                        <td>{{ setting_data.setting.name }}</td>
+                                        <td>{{ setting_data.gram|round(2) }}</td>
+                                        <td>
+                                            <input type="number" step="0.01" min="0" class="form-control"
+                                                   id="setting_{{ setting_id }}" name="setting_{{ setting_id }}"
+                                                   value="{{ setting_data.gram|round(2) }}" required>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notlar</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-sticky-note"></i></span>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+                        <div class="form-text">İsteğe bağlı: Farklılık veya diğer bilgiler için notlar ekleyin</div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check-circle me-1"></i>Kasa Kontrolünü Kaydet
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Kasa Kontrol Bilgilendirmesi</h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li class="mb-2">
+                        <strong>Günlük Kasa Kontrolü</strong>, kasadaki fiziksel altınların sistem kayıtlarıyla tutarlılığını kontrol etmek için kullanılır.
+                    </li>
+                    <li class="mb-2">
+                        Kontrol sırasında, her ayar için kasadaki gerçek miktarları girmeniz istenir.
+                    </li>
+                    <li class="mb-2">
+                        Sistem, girdiğiniz değerler ile beklenen değerler arasındaki farkı hesaplar ve kaydeder.
+                    </li>
+                    <li>
+                        Günlük kasa kontrolü, her gün bir kez yapılabilir. Önceki kayıtlar Kasa Geçmişi sayfasından görüntülenebilir.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

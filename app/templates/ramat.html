@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Ramat İşlemi - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-fire me-2"></i>Ramat İşlemi
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneline Dön</span>
+                </a>
+                <a href="{{ url_for('main.fires') }}" class="btn btn-info">
+                    <i class="fas fa-list me-1"></i><span class="d-none d-md-inline-block">Fire Kayıtları</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Bölge Altın Durumu -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Bölge Has Değerleri</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Bölge</th>
+                                <th>Ayar</th>
+                                <th>Gram</th>
+                                <th>Milyem</th>
+                                <th>Has Değer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for region in region_data %}
+                            <tr class="table-primary">
+                                <td colspan="4" class="fw-bold">{{ region.name|capitalize }}</td>
+                                <td class="fw-bold">{{ region.total_pure_gold|round(4) }} g</td>
+                            </tr>
+                                {% for setting in region.settings %}
+                                <tr>
+                                    <td></td>
+                                    <td>{{ setting.name }}</td>
+                                    <td>{{ setting.gram|round(2) }} g</td>
+                                    <td>{{ setting.purity }} ‰</td>
+                                    <td>{{ setting.pure_gold|round(4) }} g</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Bölgelerde ramat için altın bulunmuyor
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <td colspan="4" class="fw-bold text-end">Toplam Has Değer:</td>
+                                <td class="fw-bold">{{ total_pure_gold|round(4) }} g</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ramat İşlemi -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-fire-alt me-2"></i>Ramat Uygula</h5>
+            </div>
+            <div class="card-body">
+                {% if total_pure_gold > 0 %}
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="actual_pure_gold" class="form-label">Gerçek Has Değer (g) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-coins"></i></span>
+                            <input type="number" step="0.0001" min="0.0001" max="{{ total_pure_gold }}" class="form-control"
+                                   id="actual_pure_gold" name="actual_pure_gold" required>
+                            <span class="input-group-text">g</span>
+                            <div class="invalid-feedback">
+                                Geçerli bir has değeri giriniz (maksimum: {{ total_pure_gold|round(4) }} g)
+                            </div>
+                        </div>
+                        <div class="form-text">
+                            Ramat sonucu elde edilen has altın miktarı
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notlar</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-sticky-note"></i></span>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <div>
+                                <strong>Dikkat:</strong> Bu işlem tüm bölgelerdeki altınları kasaya aktaracak ve fire hesaplayacaktır.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-warning" onclick="return confirm('Ramat işlemini uygulamak istediğinize emin misiniz?')">
+                            <i class="fas fa-fire-alt me-1"></i>Ramat Uygula
+                        </button>
+                    </div>
+
+                    <div class="form-text text-center mt-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Fire: {{ total_pure_gold|round(4) }} g - Girilen Has Değer
+                    </div>
+                </form>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Ramat işlemi için bölgelerde altın bulunması gerekiyor.
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-tachometer-alt me-1"></i>Gösterge Paneline Dön
+                    </a>
+                    <a href="{{ url_for('main.fires') }}" class="btn btn-outline-info">
+                        <i class="fas fa-list me-1"></i>Fire Kayıtlarını Görüntüle
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

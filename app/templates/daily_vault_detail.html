@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Kasa Kontrol Detay - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-info-circle me-2"></i>Kasa Kontrol Detayları
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.daily_vault_history') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Kasa Geçmişine Dön</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Ana Bilgiler -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-cash-register me-2"></i>Kasa Kontrol Özeti</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">Tarih:</h6>
+                        <p class="mb-0">{{ daily_vault.date.strftime('%d-%m-%Y') }}</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">İşlemi Yapan:</h6>
+                        <p class="mb-0">{{ daily_vault.user.username }}</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">Beklenen Toplam:</h6>
+                        <p class="mb-0 fw-bold">{{ daily_vault.expected_total|round(2) }} g</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">Gerçek Toplam:</h6>
+                        <p class="mb-0 fw-bold">{{ daily_vault.actual_total|round(2) }} g</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6 class="text-muted mb-1">Fark:</h6>
+                        <p class="mb-0 fw-bold {{ 'text-danger' if daily_vault.difference < 0 else 'text-success' if daily_vault.difference > 0 else '' }}">
+                            {{ daily_vault.difference|round(2) }} g
+                        </p>
+                    </div>
+                </div>
+
+                {% if daily_vault.notes %}
+                <div class="mb-3">
+                    <h6 class="text-muted mb-1">Notlar:</h6>
+                    <p class="mb-0">{{ daily_vault.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Detaylı Bilgiler -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Ayar Bazında Detaylar</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ayar</th>
+                                <th>Beklenen</th>
+                                <th>Gerçek</th>
+                                <th>Fark</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detail in daily_vault.details %}
+                            <tr>
+                                <td>{{ detail.setting.name }}</td>
+                                <td>{{ detail.expected_gram|round(2) }} g</td>
+                                <td>{{ detail.actual_gram|round(2) }} g</td>
+                                <td class="{{ 'text-danger' if (detail.actual_gram - detail.expected_gram) < 0 else 'text-success' if (detail.actual_gram - detail.expected_gram) > 0 else '' }}">
+                                    {{ (detail.actual_gram - detail.expected_gram)|round(2) }} g
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Detay bulunamadı
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <td colspan="1" class="fw-bold text-end">Toplam:</td>
+                                <td class="fw-bold">{{ daily_vault.expected_total|round(2) }} g</td>
+                                <td class="fw-bold">{{ daily_vault.actual_total|round(2) }} g</td>
+                                <td class="fw-bold {{ 'text-danger' if daily_vault.difference < 0 else 'text-success' if daily_vault.difference > 0 else '' }}">
+                                    {{ daily_vault.difference|round(2) }} g
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Geçmiş Karşılaştırma</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">
+                    Bu kasa kontrol kaydı, {{ daily_vault.date.strftime('%d-%m-%Y') }} tarihinde yapılmıştır.
+                    Kontrol sonucunda, sistemde beklenen {{ daily_vault.expected_total|round(2) }} g toplam altına karşılık,
+                    gerçekte {{ daily_vault.actual_total|round(2) }} g altın bulunmuştur.
+
+                    {% if daily_vault.difference == 0 %}
+                    Kasada herhangi bir fark tespit edilmemiştir.
+                    {% elif daily_vault.difference > 0 %}
+                    Kasada <strong class="text-success">{{ daily_vault.difference|round(2) }} g fazla</strong> altın tespit edilmiştir.
+                    {% else %}
+                    Kasada <strong class="text-danger">{{ (daily_vault.difference * -1)|round(2) }} g eksik</strong> altın tespit edilmiştir.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

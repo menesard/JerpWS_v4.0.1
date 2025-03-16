@@ -1,8 +1,10 @@
+from datetime import datetime
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from app import db
 from flask_login import current_user
-from app.models.database import User
+from app.models.database import User, Fire, Region
 from app.models.system_manager import SystemManager
 from app.hardware.scale import ScaleManager
 from werkzeug.security import check_password_hash
@@ -355,3 +357,212 @@ def add_customer_transaction(customer_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+@api_bp.route('/regions', methods=['GET'])
+@jwt_required()
+def get_regions():
+    """Tüm bölgeleri döndür"""
+    regions = Region.query.filter_by(is_active=True).all()
+    result = []
+    for region in regions:
+        result.append({
+            "id": region.id,
+            "name": region.name,
+            "is_default": region.is_default
+        })
+    return jsonify({"regions": result}), 200
+
+
+@api_bp.route('/regions', methods=['POST'])
+@jwt_required()
+def add_region():
+    """Yeni bölge ekle"""
+    # Admin kontrolü
+    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    if not current_user or not current_user.is_admin:
+        return jsonify({"error": "Bu işlem için yetkiniz yok"}), 403
+
+    data = request.get_json()
+    if not data or 'name' not in data:
+        return jsonify({"error": "Bölge adı gereklidir"}), 400
+
+    success, message = SystemManager.add_region(data['name'])
+    if success:
+        return jsonify({"message": message}), 201
+    else:
+        return jsonify({"error": message}), 400
+
+
+@api_bp.route('/regions/<int:region_id>', methods=['DELETE'])
+@jwt_required()
+def delete_region(region_id):
+    """Bölgeyi sil (pasif yap)"""
+    # Admin kontrolü
+    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    if not current_user or not current_user.is_admin:
+        return jsonify({"error": "Bu işlem için yetkiniz yok"}), 403
+
+    success, message = SystemManager.deactivate_region(region_id)
+    if success:
+        return jsonify({"message": message}), 200
+    else:
+        return jsonify({"error": message}), 400
+
+
+@api_bp.route('/ramat', methods=['POST'])
+@jwt_required()
+def create_ramat():
+    """Ramat işlemi oluştur"""
+    data = request.get_json()
+
+    if not data or 'actual_pure_gold' not in data:
+        return jsonify({"error": "Gerçek has değeri gereklidir"}), 400
+
+    # Kullanıcı kimliğini al
+    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    if not current_user:
+        return jsonify({"error": "Kullanıcı bulunamadı"}), 401
+
+    # Yönetici kontrolü
+    if not current_user.has_role('manager'):
+        return jsonify({"error": "Bu işlem için yönetici yetkisi gereklidir"}), 403
+
+    try:
+        actual_pure_gold = float(data['actual_pure_gold'])
+        notes = data.get('notes')
+
+        success, message = SystemManager.create_ramat(current_user.id, actual_pure_gold, notes)
+
+        if success:
+            return jsonify({"message": message}), 201
+        else:
+            return jsonify({"error": message}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@api_bp.route('/fires', methods=['GET'])
+@jwt_required()
+def get_fires():
+    """Fire kayıtlarını listele"""
+    fires = Fire.query.order_by(Fire.timestamp.desc()).all()
+    result = []
+
+    for fire in fires:
+        result.append({
+            "id": fire.id,
+            "date": fire.timestamp.strftime('%d-%m-%Y %H:%M:%S'),
+            "expected_pure_gold": fire.expected_pure_gold,
+            "actual_pure_gold": fire.actual_pure_gold,
+            "fire_amount": fire.fire_amount,
+            "user": fire.user.username if fire.user else "Bilinmeyen"
+        })
+
+    return jsonify({"fires": result}), 200
+
+
+@api_bp.route('/expenses', methods=['GET'])
+@jwt_required()
+def get_expenses():
+    """Masrafları listele"""
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    include_used = request.args.get('include_used', 'false').lower() == 'true'
+
+    if start_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d')
+
+    if end_date:
+        end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        # Günün sonuna ayarla
+        end_date = end_date.replace(hour=23, minute=59, second=59)
+
+    expenses = SystemManager.get_expenses(start_date, end_date, include_used)
+    result = []
+
+    for expense in expenses:
+        result.append({
+            'id': expense.id,
+            'date': expense.date.strftime('%d-%m-%Y %H:%M:%S'),
+            'description': expense.description,
+            'amount_tl': expense.amount_tl,
+            'amount_gold': expense.amount_gold,
+            'gold_price': expense.gold_price,
+            'used_in_transfer': expense.used_in_transfer,
+            'user': expense.user.username if expense.user else "Bilinmeyen"
+        })
+
+    return jsonify({'expenses': result}), 200
+
+
+@api_bp.route('/expenses', methods=['POST'])
+@jwt_required()
+def add_expense():
+    """Masraf ekle"""
+    data = request.get_json()
+
+    if not data or 'description' not in data:
+        return jsonify({'error': 'Masraf açıklaması gereklidir'}), 400
+
+    # Kullanıcı kimliğini al
+    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    if not current_user:
+        return jsonify({'error': 'Kullanıcı bulunamadı'}), 401
+
+    try:
+        description = data['description']
+        amount_tl = float(data.get('amount_tl', 0))
+        amount_gold = float(data.get('amount_gold', 0))
+        gold_price = float(data.get('gold_price', 0))
+
+        success, message = SystemManager.add_expense(
+            description, amount_tl, amount_gold, gold_price, current_user.id
+        )
+
+        if success:
+            return jsonify({'message': message}), 201
+        else:
+            return jsonify({'error': message}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@api_bp.route('/transfers/calculate', methods=['GET'])
+@jwt_required()
+def calculate_transfer():
+    """Devir hesapla"""
+    transfer_data = SystemManager.calculate_transfer()
+
+    return jsonify({
+        'customer_total': transfer_data['customer_total'],
+        'labor_total': transfer_data['labor_total'],
+        'expense_total': transfer_data['expense_total'],
+        'transfer_amount': transfer_data['transfer_amount'],
+        'transaction_count': len(transfer_data['transactions']),
+        'expense_count': len(transfer_data['expenses'])
+    }), 200
+
+
+@api_bp.route('/transfers', methods=['POST'])
+@jwt_required()
+def create_transfer():
+    """Devir işlemi oluştur"""
+    # Kullanıcı kimliğini al
+    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    if not current_user:
+        return jsonify({'error': 'Kullanıcı bulunamadı'}), 401
+
+    # Yönetici kontrolü
+    if not current_user.has_role('manager'):
+        return jsonify({'error': 'Bu işlem için yönetici yetkisi gereklidir'}), 403
+
+    try:
+        success, message = SystemManager.create_transfer(current_user.id)
+
+        if success:
+            return jsonify({'message': message}), 201
+        else:
+            return jsonify({'error': message}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400

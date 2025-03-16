@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}Kasa Geçmişi - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-history me-2"></i>Kasa Kontrol Geçmişi
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.daily_vault') }}" class="btn btn-primary me-2">
+                    <i class="fas fa-cash-register me-1"></i><span class="d-none d-md-inline-block">Günlük Kasa</span>
+                </a>
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneline Dön</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Filtreleme -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Tarih Filtreleme</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-5">
+                        <label for="start_date" class="form-label">Başlangıç Tarihi</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-5">
+                        <label for="end_date" class="form-label">Bitiş Tarihi</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="fas fa-filter me-1"></i>Filtrele
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Kasa Kontrol Kayıtları</h5>
+                <div class="btn-group">
+                    <input type="text" class="form-control form-control-sm" id="table-search" placeholder="Ara..." style="width: 150px;">
+                    <button type="button" class="btn btn-sm btn-light" id="btn-export" title="Excel'e Aktar">
+                        <i class="fas fa-file-excel"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light" id="btn-print" data-action="print" title="Yazdır">
+                        <i class="fas fa-print"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0" id="daily-vault-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Beklenen Toplam</th>
+                                <th>Gerçek Toplam</th>
+                                <th>Fark</th>
+                                <th>İşlemi Yapan</th>
+                                <th class="text-end">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vault in daily_vaults %}
+                            <tr>
+                                <td>{{ vault.date.strftime('%d-%m-%Y') }}</td>
+                                <td>{{ vault.expected_total|round(2) }} g</td>
+                                <td>{{ vault.actual_total|round(2) }} g</td>
+                                <td class="{{ 'text-danger' if vault.difference < 0 else 'text-success' if vault.difference > 0 else '' }}">
+                                    {{ vault.difference|round(2) }} g
+                                </td>
+                                <td>{{ vault.user.username }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('main.daily_vault_detail', vault_id=vault.id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Kasa kontrol kaydı bulunamadı
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

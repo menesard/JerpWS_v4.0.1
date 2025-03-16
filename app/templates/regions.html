@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Bölge Yönetimi - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-map-marker-alt me-2"></i>Bölge Yönetimi
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneline Dön</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Bölge Ekleme Formu -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Yeni Bölge Ekle</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <input type="hidden" name="add_region" value="1">
+                    <div class="mb-3">
+                        <label for="region_name" class="form-label">Bölge Adı <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                            <input type="text" class="form-control" id="region_name" name="region_name" required>
+                            <div class="invalid-feedback">
+                                Bölge adı gereklidir.
+                            </div>
+                        </div>
+                        <div class="form-text">
+                            Atölye içindeki bir bölgeyi tanımlayan isim (örn. "freze", "cilalama")
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus-circle me-1"></i>Bölge Ekle
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bölge Listesi -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Bölge Listesi</h5>
+                <span class="badge bg-light text-dark">{{ regions|length }} Bölge</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0" id="regions-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Bölge Adı</th>
+                                <th>Durum</th>
+                                <th>Toplam Altın</th>
+                                <th class="text-end">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for region in regions %}
+                            <tr>
+                                <td>
+                                    {{ region.name|capitalize }}
+                                    {% if region.is_default %}
+                                    <span class="badge bg-warning text-dark ms-2">Varsayılan</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if region.is_active %}
+                                    <span class="badge bg-success">Aktif</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Pasif</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ region_totals[region.id]|round(2) }} g</td>
+                                <td class="text-end">
+                                    {% if not region.is_default and region_totals[region.id] == 0 %}
+                                    <form method="post" class="d-inline-block">
+                                        <input type="hidden" name="delete_region" value="1">
+                                        <input type="hidden" name="region_id" value="{{ region.id }}">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bu bölgeyi silmek istediğinize emin misiniz?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Henüz bölge bulunmuyor
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Bilgilendirme</h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li class="mb-2">Varsayılan bölgeler (kasa, masa, yer) silinemez ve tüm işlemlerde kullanılabilir.</li>
+                    <li class="mb-2">Bölge silme işlemi, sadece içerisinde hiç altın bulunmayan bölgeler için yapılabilir.</li>
+                    <li class="mb-2">Silinen bölgelere ait geçmiş işlemler sistemde kayıtlı kalır, ancak bu bölgelerde yeni işlem yapılamaz.</li>
+                    <li>Kasa bölgesi direk işlem yapılamaz, sadece müşteri işlemleri üzerinden değişir.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

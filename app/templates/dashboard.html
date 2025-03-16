@@ -196,7 +196,72 @@
             </div>
         </div>
     </div>
+
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card shadow h-100 quick-action-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="quick-action-icon bg-warning text-dark">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-1">Ramat İşlemi</h6>
+                        <a href="{{ url_for('main.ramat') }}" class="stretched-link">Ramat Yap / Fire Kayıtları</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card shadow h-100 quick-action-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="quick-action-icon bg-danger text-white">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-1">Masraflar</h6>
+                        <a href="{{ url_for('main.expenses') }}" class="stretched-link">Masraf Ekle / Görüntüle</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card shadow h-100 quick-action-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="quick-action-icon bg-success text-white">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-1">Devir İşlemi</h6>
+                        <a href="{{ url_for('main.transfers') }}" class="stretched-link">Devir Hesapla</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card shadow h-100 quick-action-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="quick-action-icon bg-primary text-white">
+                        <i class="fas fa-cash-register"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-1">Günlük Kasa</h6>
+                        <a href="{{ url_for('main.daily_vault') }}" class="stretched-link">Kasa Kontrol</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}

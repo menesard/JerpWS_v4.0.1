@@ -24,10 +24,12 @@ class Region(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(20), unique=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)  # Bölgenin aktif/silindi durumu
+    is_default = db.Column(db.Boolean, default=False)  # Varsayılan bölge mi?
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
         return f"<Region {self.name}>"
-
 
 class Operation(db.Model):
     __tablename__ = 'operations'
@@ -142,18 +144,34 @@ class CustomerTransaction(db.Model):
 
 def init_db():
     """Veritabanını başlangıç verileriyle doldur"""
-    # Bölgeler
+    # Varsayılan bölgeler
+    default_regions = [
+        {'name': 'kasa', 'is_default': True},
+        {'name': 'masa', 'is_default': True},
+        {'name': 'yer', 'is_default': True}
+    ]
 
-    global TRANSACTION_PRODUCT_IN, TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_IN, TRANSACTION_SCRAP_OUT
-    TRANSACTION_PRODUCT_IN = 'PRODUCT_IN'
-    TRANSACTION_PRODUCT_OUT = 'PRODUCT_OUT'
-    TRANSACTION_SCRAP_IN = 'SCRAP_IN'
-    TRANSACTION_SCRAP_OUT = 'SCRAP_OUT'
+    # Normal bölgeler
+    normal_regions = ['polish', 'melting', 'saw', 'acid']
 
-    regions = ['safe', 'table', 'polish', 'melting', 'saw', 'acid']
-    for region_name in regions:
+    # Varsayılan bölgeleri ekle
+    for region_data in default_regions:
+        if not Region.query.filter_by(name=region_data['name']).first():
+            region = Region(
+                name=region_data['name'],
+                is_default=True,
+                is_active=True
+            )
+            db.session.add(region)
+
+    # Normal bölgeleri ekle
+    for region_name in normal_regions:
         if not Region.query.filter_by(name=region_name).first():
-            region = Region(name=region_name)
+            region = Region(
+                name=region_name,
+                is_default=False,
+                is_active=True
+            )
             db.session.add(region)
 
     # Ayarlar ve milyem değerleri
@@ -177,8 +195,102 @@ def init_db():
         admin = User(
             username='admin',
             password_hash=generate_password_hash('admin'),
-            is_admin=True
+            is_admin=True,
+            role='admin'
         )
         db.session.add(admin)
 
     db.session.commit()
+
+
+class Fire(db.Model):
+    __tablename__ = 'fires'
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    expected_pure_gold = db.Column(db.Float, nullable=False)  # Beklenen has miktar
+    actual_pure_gold = db.Column(db.Float, nullable=False)  # Gerçek has miktar
+    fire_amount = db.Column(db.Float, nullable=False)  # Fire miktarı (has cinsinden)
+    notes = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    # İlişkiler
+    user = db.relationship('User', backref=db.backref('fires', lazy='dynamic'))
+    fire_details = db.relationship('FireDetail', backref='fire', lazy='dynamic')
+
+
+class FireDetail(db.Model):
+    __tablename__ = 'fire_details'
+
+    id = db.Column(db.Integer, primary_key=True)
+    fire_id = db.Column(db.Integer, db.ForeignKey('fires.id'), nullable=False)
+    region_id = db.Column(db.Integer, db.ForeignKey('regions.id'), nullable=False)
+    setting_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=False)
+    gram = db.Column(db.Float, nullable=False)
+    pure_gold = db.Column(db.Float, nullable=False)
+
+    # İlişkiler
+    region = db.relationship('Region')
+    setting = db.relationship('Setting')
+
+
+class Expense(db.Model):
+    __tablename__ = 'expenses'
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    description = db.Column(db.String(200), nullable=False)
+    amount_tl = db.Column(db.Float, default=0)  # TL cinsinden tutar
+    amount_gold = db.Column(db.Float, default=0)  # Altın gram cinsinden tutar
+    gold_price = db.Column(db.Float, default=0)  # İşlem günündeki altın fiyatı
+    used_in_transfer = db.Column(db.Boolean, default=False)  # Devirde kullanıldı mı
+    transfer_id = db.Column(db.Integer, db.ForeignKey('transfers.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    # İlişkiler
+    user = db.relationship('User')
+
+
+class Transfer(db.Model):
+    __tablename__ = 'transfers'
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    customer_total = db.Column(db.Float, nullable=False)  # Müşteri işlemleri toplamı
+    labor_total = db.Column(db.Float, nullable=False)  # İşçilik toplamı
+    expense_total = db.Column(db.Float, nullable=False)  # Masraf toplamı
+    transfer_amount = db.Column(db.Float, nullable=False)  # Devir miktarı
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    # İlişkiler
+    user = db.relationship('User')
+    expenses = db.relationship('Expense', backref='transfer')
+
+
+class DailyVault(db.Model):
+    __tablename__ = 'daily_vaults'
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, default=datetime.utcnow().date, nullable=False)
+    expected_total = db.Column(db.Float, nullable=False)  # Sistemde beklenen toplam
+    actual_total = db.Column(db.Float, nullable=False)  # Girilen gerçek toplam
+    difference = db.Column(db.Float, nullable=False)  # Fark
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    notes = db.Column(db.Text)
+
+    # İlişkiler
+    user = db.relationship('User')
+    details = db.relationship('DailyVaultDetail', backref='daily_vault', lazy='dynamic')
+
+
+class DailyVaultDetail(db.Model):
+    __tablename__ = 'daily_vault_details'
+
+    id = db.Column(db.Integer, primary_key=True)
+    daily_vault_id = db.Column(db.Integer, db.ForeignKey('daily_vaults.id'), nullable=False)
+    setting_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=False)
+    expected_gram = db.Column(db.Float, nullable=False)  # Sistemde beklenen
+    actual_gram = db.Column(db.Float, nullable=False)  # Girilen gerçek
+
+    # İlişkiler
+    setting = db.relationship('Setting')

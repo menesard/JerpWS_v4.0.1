@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Yeni Devir İşlemi - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-plus-circle me-2"></i>Yeni Devir İşlemi
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.transfers') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Devir Listesine Dön</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Devir Hesaplaması -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Devir Hesaplaması</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-6">Müşteri İşlemleri:</dt>
+                    <dd class="col-sm-6">{{ transfer_data.customer_total|round(4) }} g</dd>
+
+                    <dt class="col-sm-6">İşçilik Toplamı:</dt>
+                    <dd class="col-sm-6">{{ transfer_data.labor_total|round(4) }} g</dd>
+
+                    <dt class="col-sm-6">Masraf Toplamı:</dt>
+                    <dd class="col-sm-6">{{ transfer_data.expense_total|round(4) }} g</dd>
+
+                    <dt class="col-sm-6">Devir Miktarı:</dt>
+                    <dd class="col-sm-6 fw-bold h5 mb-0 text-success">{{ transfer_data.transfer_amount|round(4) }} g</dd>
+                </dl>
+
+                <hr>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <h6 class="text-muted mb-1">İşlem Sayısı:</h6>
+                        <p class="mb-0">{{ transfer_data.transactions|length }}</p>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted mb-1">Masraf Sayısı:</h6>
+                        <p class="mb-0">{{ transfer_data.expenses|length }}</p>
+                    </div>
+                </div>
+
+                {% if transfer_data.transfer_amount <= 0 %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Uyarı:</strong> Devir miktarı sıfır veya negatif olduğu için devir işlemi yapılamaz.
+                </div>
+                {% else %}
+                <form method="post">
+                    <div class="alert alert-warning">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <div>
+                                <strong>Dikkat:</strong> Bu işlem, son devirden sonraki tüm müşteri işlemlerini ve masrafları devre dahil edecektir.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Devir işlemini oluşturmak istediğinize emin misiniz?')">
+                            <i class="fas fa-check-circle me-1"></i>Devir Oluştur
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Devir Formülü ve Açıklama -->
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Devir Hesaplama Formülü</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-light">
+                    <p class="text-center mb-2 fw-bold">
+                        Devir = (Müşterilere Verilenler + İşçilik) - (Müşterilerden Alınanlar + İşçilik) - Masraflar
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="fw-bold">Formül Açıklaması:</h6>
+                    <ul>
+                        <li>
+                            <strong>Müşterilere Verilenler:</strong>
+                            Müşterilere verilen altınların has değerleri toplamı (ürün ve hurda çıkışları)
+                        </li>
+                        <li>
+                            <strong>Müşterilerden Alınanlar:</strong>
+                            Müşterilerden alınan altınların has değerleri toplamı (ürün ve hurda girişleri)
+                        </li>
+                        <li>
+                            <strong>İşçilik:</strong>
+                            İşlem sırasında kaydedilen işçilik yüzdelerinin has karşılıkları
+                        </li>
+                        <li>
+                            <strong>Masraflar:</strong>
+                            Kaydedilen altın masraflarının gramaj toplamı
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-secondary">
+                    <h6 class="fw-bold mb-2">Bu Devire Dahil Edilecek Veriler:</h6>
+                    <ul class="mb-0">
+                        <li>Son devirden sonra kaydedilen tüm müşteri işlemleri (henüz devire dahil edilmemiş)</li>
+                        <li>Son devirden sonra kaydedilen tüm masraflar (henüz devire dahil edilmemiş)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

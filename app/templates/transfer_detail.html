@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block title %}Devir Detay - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-info-circle me-2"></i>Devir Detayları
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.transfers') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Devir Listesine Dön</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Ana Devir Bilgileri -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Devir Özeti</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">Tarih:</h6>
+                        <p class="mb-0">{{ transfer.date.strftime('%d-%m-%Y %H:%M:%S') }}</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">İşlemi Yapan:</h6>
+                        <p class="mb-0">{{ transfer.user.username }}</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">Müşteri Toplamı:</h6>
+                        <p class="mb-0">{{ transfer.customer_total|round(4) }} g</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">İşçilik Toplamı:</h6>
+                        <p class="mb-0">{{ transfer.labor_total|round(4) }} g</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <h6 class="text-muted mb-1">Masraf Toplamı:</h6>
+                        <p class="mb-0">{{ transfer.expense_total|round(4) }} g</p>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted mb-1">Devir Miktarı:</h6>
+                        <p class="mb-0 fw-bold text-success">{{ transfer.transfer_amount|round(4) }} g</p>
+                    </div>
+                </div>
+
+                <div class="alert alert-light text-center">
+                    <p class="mb-0 small">
+                        <strong>Formül:</strong> (Müşterilere Verilenler + İşçilik) - (Müşterilerden Alınanlar + İşçilik) - Masraflar
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- İşlem ve Masraf İstatistikleri -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Devir İstatistikleri</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary mb-3">
+                                    <i class="fas fa-users me-2"></i>Müşteri İşlemleri
+                                </h6>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>İşlem Sayısı:</span>
+                                    <span class="fw-bold">{{ transactions|length }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Ürün Giriş:</span>
+                                    <span>{{ transactions|selectattr('transaction_type', 'equalto', 'PRODUCT_IN')|list|length }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Ürün Çıkış:</span>
+                                    <span>{{ transactions|selectattr('transaction_type', 'equalto', 'PRODUCT_OUT')|list|length }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Hurda Giriş:</span>
+                                    <span>{{ transactions|selectattr('transaction_type', 'equalto', 'SCRAP_IN')|list|length }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Hurda Çıkış:</span>
+                                    <span>{{ transactions|selectattr('transaction_type', 'equalto', 'SCRAP_OUT')|list|length }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary mb-3">
+                                    <i class="fas fa-money-bill-wave me-2"></i>Masraflar
+                                </h6>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Masraf Sayısı:</span>
+                                    <span class="fw-bold">{{ expenses|length }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Toplam Altın Masrafı:</span>
+                                    <span>{{ transfer.expense_total|round(4) }} g</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Ortalama Masraf:</span>
+                                    <span>{{ (transfer.expense_total / expenses|length)|round(4) if expenses else 0 }} g</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Dahil Edilen Müşteri İşlemleri -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Devire Dahil Edilen Müşteri İşlemleri</h5>
+                <input type="text" class="form-control form-control-sm" id="transaction-search" placeholder="İşlem ara..." style="width: 200px;">
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0" id="transactions-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tarih</th>
+                                <th>İşlem</th>
+                                <th>Müşteri</th>
+                                <th>Ürün</th>
+                                <th>Ayar</th>
+                                <th>Gram</th>
+                                <th>Has Değer</th>
+                                <th>İşçilik Has</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tx in transactions %}
+                            <tr>
+                                <td>{{ tx.transaction_date.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                                <td>
+                                    <span class="badge {% if 'OUT' in tx.transaction_type %}bg-danger{% else %}bg-success{% endif %}">
+                                        {{ tx.transaction_type|replace('_IN', ' GİRİŞ')|replace('_OUT', ' ÇIKIŞ') }}
+                                    </span>
+                                </td>
+                                <td>{{ tx.customer.name }}</td>
+                                <td>{{ tx.product_description or '-' }}</td>
+                                <td>{{ tx.setting.name }}</td>
+                                <td>{{ tx.gram|round(2) }} g</td>
+                                <td>{{ tx.pure_gold_weight|round(4) }} g</td>
+                                <td>{{ tx.labor_pure_gold|round(4) }} g</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Bu devire dahil edilen işlem yok
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Dahil Edilen Masraflar -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Devire Dahil Edilen Masraflar</h5>
+                <input type="text" class="form-control form-control-sm" id="expense-search" placeholder="Masraf ara..." style="width: 200px;">
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0" id="expenses-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Açıklama</th>
+                                <th>TL Tutarı</th>
+                                <th>Altın Tutarı</th>
+                                <th>Altın Fiyatı</th>
+                                <th>İşlemi Yapan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in expenses %}
+                            <tr>
+                                <td>{{ expense.date.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                                <td>{{ expense.description }}</td>
+                                <td>{{ expense.amount_tl|round(2) }} ₺</td>
+                                <td>{{ expense.amount_gold|round(2) }} g</td>
+                                <td>{{ expense.gold_price|round(2) }} ₺/g</td>
+                                <td>{{ expense.user.username }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Bu devire dahil edilen masraf yok
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

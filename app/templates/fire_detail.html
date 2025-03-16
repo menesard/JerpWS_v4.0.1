@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Fire Detay - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-info-circle me-2"></i>Fire Detayları
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.fires') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Fire Listesine Dön</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Ana Fire Bilgileri -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-fire me-2"></i>Fire Özeti</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">Tarih:</h6>
+                        <p class="mb-0">{{ fire.timestamp.strftime('%d-%m-%Y %H:%M:%S') }}</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">İşlemi Yapan:</h6>
+                        <p class="mb-0">{{ fire.user.username }}</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">Beklenen Has:</h6>
+                        <p class="mb-0 fw-bold">{{ fire.expected_pure_gold|round(4) }} g</p>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <h6 class="text-muted mb-1">Gerçek Has:</h6>
+                        <p class="mb-0 fw-bold">{{ fire.actual_pure_gold|round(4) }} g</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <h6 class="text-muted mb-1">Fire Miktarı:</h6>
+                        <p class="mb-0 fw-bold text-danger">{{ fire.fire_amount|round(4) }} g</p>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted mb-1">Fire Oranı:</h6>
+                        <p class="mb-0 fw-bold text-danger">{{ ((fire.fire_amount / fire.expected_pure_gold) * 100)|round(2) }}%</p>
+                    </div>
+                </div>
+
+                {% if fire.notes %}
+                <div class="mb-3">
+                    <h6 class="text-muted mb-1">Notlar:</h6>
+                    <p class="mb-0">{{ fire.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Bölge Detayları -->
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Bölge Detayları</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Bölge</th>
+                                <th>Ayar</th>
+                                <th>Gram</th>
+                                <th>Milyem</th>
+                                <th>Has Değer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for region_name, settings in region_details.items() %}
+                            <tr class="table-primary">
+                                <td colspan="4" class="fw-bold">{{ region_name|capitalize }}</td>
+                                <td class="fw-bold">
+                                    {{ settings|sum(attribute='pure_gold')|round(4) }} g
+                                </td>
+                            </tr>
+                                {% for setting in settings %}
+                                <tr>
+                                    <td></td>
+                                    <td>{{ setting.setting }}</td>
+                                    <td>{{ setting.gram|round(2) }} g</td>
+                                    <td>{{ setting.purity }} ‰</td>
+                                    <td>{{ setting.pure_gold|round(4) }} g</td>
+                                </tr>
+                                {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <td colspan="4" class="fw-bold text-end">Toplam Has Değer:</td>
+                                <td class="fw-bold">{{ fire.expected_pure_gold|round(4) }} g</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Fire Açıklaması</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">
+                    Bu fire kaydı, {{ fire.timestamp.strftime('%d-%m-%Y') }} tarihinde yapılan ramat işlemi sonucu oluşmuştur.
+                    İşlem sonucunda, beklenen {{ fire.expected_pure_gold|round(4) }} g has altın yerine,
+                    {{ fire.actual_pure_gold|round(4) }} g has altın elde edilmiştir. Toplam fire miktarı {{ fire.fire_amount|round(4) }} g ({{ ((fire.fire_amount / fire.expected_pure_gold) * 100)|round(2) }}%)
+                    olarak hesaplanmıştır.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,7 +1,8 @@
 from datetime import datetime
 
 from app import db
-from app.models.database import Region, Setting, Operation, Customer, CustomerTransaction, User
+from app.models.database import Region, Setting, Operation, Customer, CustomerTransaction, User, Expense, Transfer, \
+    Fire, FireDetail, DailyVaultDetail, DailyVault
 from app.models.database import OPERATION_ADD, OPERATION_SUBTRACT
 from app.models.database import TRANSACTION_PRODUCT_IN, TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_IN, TRANSACTION_SCRAP_OUT
 from sqlalchemy import func
@@ -277,7 +278,7 @@ class SystemManager:
     def add_customer_transaction(customer_id, transaction_type, setting_name, gram,
                                  product_description=None, unit_price=None, labor_cost=0,
                                  purity_per_thousand=None, labor_percentage=0, notes=None, user_id=None):
-        """Müşteri işlemi ekle - has değer hesaplamalı"""
+        """Müşteri işlemi ekle - has değer hesaplamalı ve kasaya etkili"""
         customer = Customer.query.get(customer_id)
         setting = SystemManager.get_setting_with_purity(setting_name)
 
@@ -313,17 +314,20 @@ class SystemManager:
             labor_percentage=labor_percentage,
             labor_pure_gold=labor_pure_gold,
             notes=notes,
-            created_by_user_id=user_id  # Kullanıcı ID'si eklendi
+            created_by_user_id=user_id,
+            used_in_transfer=False  # Devir hesaplamada kullanılmadı
         )
 
         db.session.add(transaction)
 
         # Kasadan ürün çıkışı veya hurda çıkışı için kasa stokunu güncelle
         if transaction_type in [TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_OUT]:
+            # Bu işlemler kasadan direk çıkış yapar
             SystemManager.remove_item_safe(setting_name, gram, user_id=user_id)
 
         # Ürün girişi veya hurda girişi için kasa stokunu güncelle
         elif transaction_type in [TRANSACTION_PRODUCT_IN, TRANSACTION_SCRAP_IN]:
+            # Bu işlemler kasaya direk giriş yapar
             SystemManager.add_item_safe(setting_name, gram, user_id=user_id)
 
         db.session.commit()
@@ -658,3 +662,344 @@ class SystemManager:
             result.append(transaction_data)
 
         return result
+
+    @staticmethod
+    def add_region(name):
+        """Yeni bölge ekle"""
+        if Region.query.filter_by(name=name).first():
+            return False, "Bu isimde bir bölge zaten var"
+
+        region = Region(name=name)
+        db.session.add(region)
+        db.session.commit()
+        return True, "Bölge başarıyla eklendi"
+
+    @staticmethod
+    def deactivate_region(region_id):
+        """Bölgeyi pasif duruma getir (silmiş gibi)"""
+        region = Region.query.get(region_id)
+        if not region:
+            return False, "Bölge bulunamadı"
+
+        # Varsayılan bölgeyi silemeyiz
+        if region.is_default:
+            return False, "Varsayılan bölgeler silinemez"
+
+        # Bölgedeki tüm altınları kontrol et
+        total_gold = 0
+        for setting in Setting.query.all():
+            status = SystemManager.get_region_status(region.name, setting.name)
+            total_gold += status[setting.name] if setting.name in status else 0
+
+        # Bölgede altın varsa silemeyiz
+        if total_gold > 0:
+            return False, f"Bölgede {total_gold}g altın bulunduğu için silinemez"
+
+        region.is_active = False
+        db.session.commit()
+        return True, "Bölge başarıyla silindi"
+
+    @staticmethod
+    def create_ramat(user_id, actual_pure_gold, notes=None):
+        """Ramat işlemi oluştur ve fire hesapla"""
+        # Tüm bölgelerdeki altınları topla
+        total_pure_gold = 0
+        fire_details = []
+
+        # Aktif bölgeleri al
+        regions = Region.query.filter_by(is_active=True).all()
+
+        # Her bölge için ayar bazında detayları hesapla
+        for region in regions:
+            if region.name == 'kasa':
+                continue  # Kasa bölgesini ramat hesabına katmıyoruz
+
+            for setting in Setting.query.all():
+                status = SystemManager.get_region_status(region.name, setting.name)
+                gram = status.get(setting.name, 0)
+
+                if gram > 0:
+                    # Has değerini hesapla
+                    pure_gold = gram * (setting.purity_per_thousand / 1000)
+                    total_pure_gold += pure_gold
+
+                    fire_details.append({
+                        'region_id': region.id,
+                        'setting_id': setting.id,
+                        'gram': gram,
+                        'pure_gold': pure_gold
+                    })
+
+        if total_pure_gold <= 0:
+            return False, "Bölgelerde ramat için altın bulunmuyor"
+
+        # Gerçek has değer beklenen değerden büyük olamaz
+        if float(actual_pure_gold) > total_pure_gold:
+            return False, f"Gerçek has değer ({actual_pure_gold}g), beklenen değerden ({total_pure_gold:.2f}g) büyük olamaz"
+
+        # Fire miktarını hesapla
+        fire_amount = total_pure_gold - float(actual_pure_gold)
+
+        # Fire kaydı oluştur
+        fire = Fire(
+            expected_pure_gold=total_pure_gold,
+            actual_pure_gold=float(actual_pure_gold),
+            fire_amount=fire_amount,
+            notes=notes,
+            user_id=user_id
+        )
+        db.session.add(fire)
+        db.session.flush()  # ID ataması için
+
+        # Fire detaylarını ekle
+        for detail in fire_details:
+            fire_detail = FireDetail(
+                fire_id=fire.id,
+                region_id=detail['region_id'],
+                setting_id=detail['setting_id'],
+                gram=detail['gram'],
+                pure_gold=detail['pure_gold']
+            )
+            db.session.add(fire_detail)
+
+        # Ramat sonrası bölgelerden altınları çıkar ve kasaya ekle
+        # Her bölgeyi temizle (kasa hariç)
+        for region in regions:
+            if region.name == 'kasa':
+                continue
+
+            for setting in Setting.query.all():
+                status = SystemManager.get_region_status(region.name, setting.name)
+                gram = status.get(setting.name, 0)
+
+                if gram > 0:
+                    # Bölgeden çıkar
+                    SystemManager.remove_item(region.name, setting.name, gram, user_id)
+
+        # Kasaya gerçek has değeri ekle
+        setting_22 = Setting.query.filter_by(name='22').first()
+        if setting_22:
+            # Gerçek değeri 22 ayar olarak kasaya ekle
+            gold_equivalent = float(actual_pure_gold) / (setting_22.purity_per_thousand / 1000)
+            SystemManager.add_item_safe(setting_22.name, gold_equivalent, user_id)
+
+        db.session.commit()
+        return True, f"Ramat işlemi başarılı. Fire: {fire_amount:.2f}g"
+
+    @staticmethod
+    def add_expense(description, amount_tl=0, amount_gold=0, gold_price=0, user_id=None):
+        """Masraf ekle"""
+        if amount_tl <= 0 and amount_gold <= 0:
+            return False, "TL veya altın miktarından en az biri pozitif olmalıdır"
+
+        expense = Expense(
+            description=description,
+            amount_tl=amount_tl,
+            amount_gold=amount_gold,
+            gold_price=gold_price,
+            user_id=user_id
+        )
+
+        db.session.add(expense)
+        db.session.commit()
+        return True, "Masraf başarıyla eklendi"
+
+    @staticmethod
+    def get_expenses(start_date=None, end_date=None, include_used=False):
+        """Masrafları listele"""
+        query = Expense.query
+
+        if start_date:
+            query = query.filter(Expense.date >= start_date)
+
+        if end_date:
+            query = query.filter(Expense.date <= end_date)
+
+        if not include_used:
+            query = query.filter(Expense.used_in_transfer == False)
+
+        return query.order_by(Expense.date.desc()).all()
+
+    @staticmethod
+    def calculate_transfer():
+        """Devir hesapla - henüz devir işlemi oluşturmaz"""
+        # Müşteri işlemlerini al (devirde henüz kullanılmamış)
+        customer_transactions = CustomerTransaction.query.filter_by(used_in_transfer=False).all()
+
+        # Müşteri işlemlerini topla
+        customer_total = 0
+        labor_total = 0
+
+        for tx in customer_transactions:
+            # Has değerler üzerinden hesapla
+            if tx.transaction_type in [TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_OUT]:
+                # Müşteriye verilen
+                customer_total += tx.pure_gold_weight
+                labor_total += tx.labor_pure_gold
+            elif tx.transaction_type in [TRANSACTION_PRODUCT_IN, TRANSACTION_SCRAP_IN]:
+                # Müşteriden alınan
+                customer_total -= tx.pure_gold_weight
+                labor_total -= tx.labor_pure_gold
+
+        # Masrafları al (devirde henüz kullanılmamış)
+        expenses = Expense.query.filter_by(used_in_transfer=False).all()
+        expense_total = sum(expense.amount_gold for expense in expenses)
+
+        # Devir formülü: Devir = (Müşterilere verilenler + İşçilik) - (Müşterilerden alınanlar + İşçilik) - Masraf
+        transfer_amount = customer_total + labor_total - expense_total
+
+        return {
+            'customer_total': customer_total,
+            'labor_total': labor_total,
+            'expense_total': expense_total,
+            'transfer_amount': transfer_amount,
+            'transactions': customer_transactions,
+            'expenses': expenses
+        }
+
+    @staticmethod
+    def create_transfer(user_id):
+        """Devir işlemi oluştur"""
+        # Devir hesapla
+        transfer_data = SystemManager.calculate_transfer()
+
+        if transfer_data['transfer_amount'] <= 0:
+            return False, "Devir miktarı sıfır veya negatif olamaz"
+
+        # Devir kaydı oluştur
+        transfer = Transfer(
+            customer_total=transfer_data['customer_total'],
+            labor_total=transfer_data['labor_total'],
+            expense_total=transfer_data['expense_total'],
+            transfer_amount=transfer_data['transfer_amount'],
+            user_id=user_id
+        )
+
+        db.session.add(transfer)
+        db.session.flush()  # ID için
+
+        # İşlemleri ve masrafları kullanıldı olarak işaretle
+        for tx in transfer_data['transactions']:
+            tx.used_in_transfer = True
+            tx.transfer_id = transfer.id
+
+        for expense in transfer_data['expenses']:
+            expense.used_in_transfer = True
+            expense.transfer_id = transfer.id
+
+        db.session.commit()
+        return True, f"Devir işlemi başarıyla tamamlandı. Devir miktarı: {transfer_data['transfer_amount']:.4f} g"
+
+    @staticmethod
+    def get_transfers():
+        """Devir işlemlerini listele"""
+        return Transfer.query.order_by(Transfer.date.desc()).all()
+
+    @staticmethod
+    def get_transfer_details(transfer_id):
+        """Devir detaylarını getir"""
+        transfer = Transfer.query.get(transfer_id)
+        if not transfer:
+            return None
+
+        # Bu devirde kullanılan işlemler
+        transactions = CustomerTransaction.query.filter_by(transfer_id=transfer_id).all()
+
+        # Bu devirde kullanılan masraflar
+        expenses = Expense.query.filter_by(transfer_id=transfer_id).all()
+
+        return {
+            'transfer': transfer,
+            'transactions': transactions,
+            'expenses': expenses
+        }
+
+    @staticmethod
+    def calculate_vault_expected():
+        """Kasada beklenen değerleri hesapla"""
+        # Kasa bölgesi
+        safe_region = Region.query.filter_by(name='kasa').first()
+        if not safe_region:
+            return None
+
+        result = {}
+        total_gram = 0
+
+        # Her ayar için kasadaki miktarı hesapla
+        for setting in Setting.query.all():
+            status = SystemManager.get_region_status('kasa', setting.name)
+            gram = status.get(setting.name, 0)
+
+            result[setting.id] = {
+                'setting': setting,
+                'gram': gram
+            }
+
+            total_gram += gram
+
+        return {
+            'details': result,
+            'total': total_gram
+        }
+
+    @staticmethod
+    def create_daily_vault(user_id, actual_grams, notes=None):
+        """Günlük kasa kaydı oluştur"""
+        # Beklenen değerleri hesapla
+        expected_data = SystemManager.calculate_vault_expected()
+        if not expected_data:
+            return False, "Kasa bölgesi bulunamadı"
+
+        # Girilen değerleri kontrol et
+        if not actual_grams or not isinstance(actual_grams, dict):
+            return False, "Geçersiz veri formatı"
+
+        # Toplam değerleri hesapla
+        actual_total = 0
+        for setting_id, gram in actual_grams.items():
+            actual_total += float(gram)
+
+        # Fark hesapla
+        difference = actual_total - expected_data['total']
+
+        # Günlük kasa kaydı oluştur
+        daily_vault = DailyVault(
+            expected_total=expected_data['total'],
+            actual_total=actual_total,
+            difference=difference,
+            user_id=user_id,
+            notes=notes
+        )
+
+        db.session.add(daily_vault)
+        db.session.flush()  # ID için
+
+        # Detayları ekle
+        for setting_id, gram in actual_grams.items():
+            setting_id = int(setting_id)
+            expected_gram = expected_data['details'].get(setting_id, {}).get('gram', 0)
+
+            detail = DailyVaultDetail(
+                daily_vault_id=daily_vault.id,
+                setting_id=setting_id,
+                expected_gram=expected_gram,
+                actual_gram=float(gram)
+            )
+
+            db.session.add(detail)
+
+        db.session.commit()
+        return True, f"Günlük kasa kaydı oluşturuldu. Fark: {difference:.2f}g"
+
+    @staticmethod
+    def get_daily_vaults(start_date=None, end_date=None):
+        """Günlük kasa kayıtlarını listele"""
+        query = DailyVault.query
+
+        if start_date:
+            query = query.filter(DailyVault.date >= start_date)
+
+        if end_date:
+            query = query.filter(DailyVault.date <= end_date)
+
+        return query.order_by(DailyVault.date.desc()).all()

@@ -81,6 +81,36 @@
                         </a>
                     </li>
                     {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.regions' %}active{% endif %}" href="{{ url_for('main.manage_regions') }}">
+                            <i class="fas fa-map-marker-alt nav-icon"></i>
+                            <span class="nav-text">Bölgeler</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.ramat' or request.endpoint == 'main.fires' %}active{% endif %}" href="{{ url_for('main.ramat') }}">
+                            <i class="fas fa-fire nav-icon"></i>
+                            <span class="nav-text">Ramat/Fire</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.expenses' %}active{% endif %}" href="{{ url_for('main.expenses') }}">
+                            <i class="fas fa-money-bill-wave nav-icon"></i>
+                            <span class="nav-text">Masraflar</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.transfers' or request.endpoint == 'main.new_transfer' %}active{% endif %}" href="{{ url_for('main.transfers') }}">
+                            <i class="fas fa-exchange-alt nav-icon"></i>
+                            <span class="nav-text">Devir</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'main.daily_vault' or request.endpoint == 'main.daily_vault_history' %}active{% endif %}" href="{{ url_for('main.daily_vault') }}">
+                            <i class="fas fa-cash-register nav-icon"></i>
+                            <span class="nav-text">Günlük Kasa</span>
+                        </a>
+                    </li>
                 </ul>
                 <div class="navbar-nav d-flex align-items-center">
                     {% if session.get('selected_setting') %}
@@ -187,6 +217,21 @@
                         <a href="{{ url_for('main.logout') }}" class="list-group-item list-group-item-action text-danger">
                             <i class="fas fa-sign-out-alt me-2"></i> Çıkış Yap
                         </a>
+                            <a href="{{ url_for('main.manage_regions') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'main.regions' %}active{% endif %}">
+                                <i class="fas fa-map-marker-alt me-2"></i> Bölge Yönetimi
+                            </a>
+                            <a href="{{ url_for('main.ramat') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'main.ramat' or request.endpoint == 'main.fires' %}active{% endif %}">
+                                <i class="fas fa-fire me-2"></i> Ramat / Fire
+                            </a>
+                            <a href="{{ url_for('main.expenses') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'main.expenses' %}active{% endif %}">
+                                <i class="fas fa-money-bill-wave me-2"></i> Masraflar
+                            </a>
+                            <a href="{{ url_for('main.transfers') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'main.transfers' %}active{% endif %}">
+                                <i class="fas fa-exchange-alt me-2"></i> Devir İşlemi
+                            </a>
+                            <a href="{{ url_for('main.daily_vault') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'main.daily_vault' %}active{% endif %}">
+                                <i class="fas fa-cash-register me-2"></i> Günlük Kasa
+                            </a>
                     </div>
                 </div>
             </div>

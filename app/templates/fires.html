@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Fire Kayıtları - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-list me-2"></i>Fire Kayıtları
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.ramat') }}" class="btn btn-warning me-2">
+                    <i class="fas fa-fire me-1"></i><span class="d-none d-md-inline-block">Ramat İşlemi</span>
+                </a>
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneline Dön</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Fire Geçmişi</h5>
+                <div class="btn-group">
+                    <input type="text" class="form-control form-control-sm" id="table-search" placeholder="Ara..." style="width: 150px;">
+                    <button type="button" class="btn btn-sm btn-light" id="btn-export" title="Excel'e Aktar">
+                        <i class="fas fa-file-excel"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light" id="btn-print" data-action="print" title="Yazdır">
+                        <i class="fas fa-print"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0" id="fires-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Beklenen Has</th>
+                                <th>Gerçek Has</th>
+                                <th>Fire Miktarı</th>
+                                <th>Fire Oranı</th>
+                                <th>İşlemi Yapan</th>
+                                <th class="text-end">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fire in fires %}
+                            <tr>
+                                <td>{{ fire.timestamp.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                                <td>{{ fire.expected_pure_gold|round(4) }} g</td>
+                                <td>{{ fire.actual_pure_gold|round(4) }} g</td>
+                                <td>{{ fire.fire_amount|round(4) }} g</td>
+                                <td>{{ ((fire.fire_amount / fire.expected_pure_gold) * 100)|round(2) }}%</td>
+                                <td>{{ fire.user.username }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('main.fire_detail', fire_id=fire.id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Henüz fire kaydı bulunmuyor
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

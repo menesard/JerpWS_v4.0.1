@@ -1,8 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, make_response
 from flask_login import login_required, login_user, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from app import db, login_manager
-from app.models.database import User, Setting, Operation
+from app.models.database import User, Setting, Operation, Region, FireDetail, Fire, DailyVault
 from app.models.system_manager import SystemManager
 from app.hardware.scale import ScaleManager
 from app.utils.helpers import change_region_tr, change_operation_tr
@@ -807,4 +807,344 @@ def stock():
         stock_data=stock_data,
         totals=totals,
         total_pure_gold=total_pure_gold
+    )
+
+
+@main_bp.route('/regions', methods=['GET', 'POST'])
+@login_required
+def manage_regions():
+    """Bölge yönetim sayfası"""
+    if not current_user.is_admin:
+        flash('Bu sayfaya erişim yetkiniz yok!', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    if request.method == 'POST':
+        if 'add_region' in request.form:
+            region_name = request.form.get('region_name')
+            if region_name:
+                success, message = SystemManager.add_region(region_name)
+                if success:
+                    flash(message, 'success')
+                else:
+                    flash(message, 'danger')
+        elif 'delete_region' in request.form:
+            region_id = request.form.get('region_id')
+            if region_id:
+                success, message = SystemManager.deactivate_region(int(region_id))
+                if success:
+                    flash(message, 'success')
+                else:
+                    flash(message, 'danger')
+
+        return redirect(url_for('main.manage_regions'))
+
+    # Tüm bölgeleri getir
+    regions = Region.query.filter_by(is_active=True).all()
+
+    # Her bölgedeki toplam altını hesapla
+    region_totals = {}
+    for region in regions:
+        region_totals[region.id] = 0
+        for setting in Setting.query.all():
+            status = SystemManager.get_region_status(region.name, setting.name)
+            region_totals[region.id] += status[setting.name] if setting.name in status else 0
+
+    return render_template(
+        'regions.html',
+        regions=regions,
+        region_totals=region_totals
+    )
+
+
+@main_bp.route('/ramat', methods=['GET', 'POST'])
+@login_required
+def ramat():
+    """Ramat işlemi sayfası"""
+    if not current_user.has_role('manager'):
+        flash('Bu sayfaya erişim için yönetici yetkisi gereklidir!', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    if request.method == 'POST':
+        actual_pure_gold = request.form.get('actual_pure_gold', type=float)
+        notes = request.form.get('notes')
+
+        if actual_pure_gold:
+            success, message = SystemManager.create_ramat(current_user.id, actual_pure_gold, notes)
+            if success:
+                flash(message, 'success')
+            else:
+                flash(message, 'danger')
+        else:
+            flash('Geçerli bir has değeri giriniz!', 'danger')
+
+        return redirect(url_for('main.ramat'))
+
+    # Bölge bazında has değerlerini hesapla
+    regions = Region.query.filter_by(is_active=True).all()
+    region_data = []
+    total_pure_gold = 0
+
+    for region in regions:
+        if region.name == 'kasa':
+            continue  # Kasa bölgesini ramat hesabına katmıyoruz
+
+        region_pure_gold = 0
+        setting_data = []
+
+        for setting in Setting.query.all():
+            status = SystemManager.get_region_status(region.name, setting.name)
+            gram = status.get(setting.name, 0)
+
+            if gram > 0:
+                pure_gold = gram * (setting.purity_per_thousand / 1000)
+                region_pure_gold += pure_gold
+
+                setting_data.append({
+                    'name': setting.name,
+                    'gram': gram,
+                    'purity': setting.purity_per_thousand,
+                    'pure_gold': pure_gold
+                })
+
+        if region_pure_gold > 0:
+            region_data.append({
+                'name': region.name,
+                'settings': setting_data,
+                'total_pure_gold': region_pure_gold
+            })
+            total_pure_gold += region_pure_gold
+
+    return render_template(
+        'ramat.html',
+        region_data=region_data,
+        total_pure_gold=total_pure_gold
+    )
+
+
+@main_bp.route('/fires')
+@login_required
+def fires():
+    """Fire kayıtları sayfası"""
+    # Tüm fire kayıtlarını getir
+    fires = Fire.query.order_by(Fire.timestamp.desc()).all()
+
+    return render_template(
+        'fires.html',
+        fires=fires
+    )
+
+
+@main_bp.route('/fires/<int:fire_id>')
+@login_required
+def fire_detail(fire_id):
+    """Fire detay sayfası"""
+    fire = Fire.query.get_or_404(fire_id)
+
+    # Fire detaylarını getir
+    details = FireDetail.query.filter_by(fire_id=fire.id).all()
+
+    # Detayları gruplama
+    region_details = {}
+    for detail in details:
+        if detail.region.name not in region_details:
+            region_details[detail.region.name] = []
+
+        region_details[detail.region.name].append({
+            'setting': detail.setting.name,
+            'gram': detail.gram,
+            'purity': detail.setting.purity_per_thousand,
+            'pure_gold': detail.pure_gold
+        })
+
+    return render_template(
+        'fire_detail.html',
+        fire=fire,
+        region_details=region_details
+    )
+
+
+@main_bp.route('/expenses', methods=['GET', 'POST'])
+@login_required
+def expenses():
+    """Masraflar sayfası"""
+    if request.method == 'POST':
+        description = request.form.get('description')
+        amount_tl = request.form.get('amount_tl', type=float, default=0)
+        amount_gold = request.form.get('amount_gold', type=float, default=0)
+        gold_price = request.form.get('gold_price', type=float, default=0)
+
+        if description:
+            success, message = SystemManager.add_expense(
+                description, amount_tl, amount_gold, gold_price, current_user.id
+            )
+            if success:
+                flash(message, 'success')
+            else:
+                flash(message, 'danger')
+        else:
+            flash('Masraf açıklaması gereklidir!', 'danger')
+
+        return redirect(url_for('main.expenses'))
+
+    # Filtreleri al
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    include_used = request.args.get('include_used') == 'on'
+
+    if start_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d')
+
+    if end_date:
+        end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        # Günün sonuna ayarla
+        end_date = end_date.replace(hour=23, minute=59, second=59)
+
+    expenses = SystemManager.get_expenses(start_date, end_date, include_used)
+
+    return render_template(
+        'expenses.html',
+        expenses=expenses,
+        start_date=start_date.strftime('%Y-%m-%d') if start_date else '',
+        end_date=end_date.strftime('%Y-%m-%d') if end_date else '',
+        include_used=include_used
+    )
+
+
+@main_bp.route('/transfers')
+@login_required
+def transfers():
+    """Devir işlemleri sayfası"""
+    transfers = SystemManager.get_transfers()
+
+    return render_template(
+        'transfers.html',
+        transfers=transfers
+    )
+
+
+@main_bp.route('/transfers/new', methods=['GET', 'POST'])
+@login_required
+def new_transfer():
+    """Yeni devir işlemi sayfası"""
+    if not current_user.has_role('manager'):
+        flash('Bu sayfaya erişim için yönetici yetkisi gereklidir!', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    if request.method == 'POST':
+        try:
+            success, message = SystemManager.create_transfer(current_user.id)
+
+            if success:
+                flash(message, 'success')
+                return redirect(url_for('main.transfers'))
+            else:
+                flash(message, 'danger')
+        except Exception as e:
+            flash(f'Hata oluştu: {str(e)}', 'danger')
+
+        return redirect(url_for('main.new_transfer'))
+
+    # Devir hesapla
+    transfer_data = SystemManager.calculate_transfer()
+
+    return render_template(
+        'new_transfer.html',
+        transfer_data=transfer_data
+    )
+
+
+@main_bp.route('/transfers/<int:transfer_id>')
+@login_required
+def transfer_detail(transfer_id):
+    """Devir detay sayfası"""
+    transfer_details = SystemManager.get_transfer_details(transfer_id)
+
+    if not transfer_details:
+        flash('Devir işlemi bulunamadı!', 'danger')
+        return redirect(url_for('main.transfers'))
+
+    return render_template(
+        'transfer_detail.html',
+        transfer=transfer_details['transfer'],
+        transactions=transfer_details['transactions'],
+        expenses=transfer_details['expenses']
+    )
+
+
+@main_bp.route('/daily-vault', methods=['GET', 'POST'])
+@login_required
+def daily_vault():
+    """Günlük kasa sayfası"""
+    if request.method == 'POST':
+        actual_grams = {}
+
+        # Form'dan ayar bazında gramları al
+        for key, value in request.form.items():
+            if key.startswith('setting_'):
+                setting_id = key.replace('setting_', '')
+                try:
+                    actual_grams[setting_id] = float(value)
+                except ValueError:
+                    actual_grams[setting_id] = 0
+
+        notes = request.form.get('notes')
+
+        if actual_grams:
+            success, message = SystemManager.create_daily_vault(current_user.id, actual_grams, notes)
+            if success:
+                flash(message, 'success')
+            else:
+                flash(message, 'danger')
+        else:
+            flash('Geçerli veri girilmedi!', 'danger')
+
+        return redirect(url_for('main.daily_vault_history'))
+
+    # Beklenen değerleri hesapla
+    expected_data = SystemManager.calculate_vault_expected()
+
+    # Bugün kayıt yapılmış mı kontrol et
+    today = datetime.utcnow().date()
+    today_record = DailyVault.query.filter(DailyVault.date == today).first()
+
+    return render_template(
+        'daily_vault.html',
+        expected_data=expected_data,
+        today_record=today_record
+    )
+
+
+@main_bp.route('/daily-vault/history')
+@login_required
+def daily_vault_history():
+    """Günlük kasa geçmişi sayfası"""
+    # Filtreleri al
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    if start_date:
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+
+    if end_date:
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+    daily_vaults = SystemManager.get_daily_vaults(start_date, end_date)
+
+    return render_template(
+        'daily_vault_history.html',
+        daily_vaults=daily_vaults,
+        start_date=start_date.strftime('%Y-%m-%d') if start_date else '',
+        end_date=end_date.strftime('%Y-%m-%d') if end_date else ''
+    )
+
+
+@main_bp.route('/daily-vault/<int:vault_id>')
+@login_required
+def daily_vault_detail(vault_id):
+    """Günlük kasa detay sayfası"""
+    daily_vault = DailyVault.query.get_or_404(vault_id)
+
+    return render_template(
+        'daily_vault_detail.html',
+        daily_vault=daily_vault
     )
