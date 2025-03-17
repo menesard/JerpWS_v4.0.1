@@ -3,6 +3,10 @@
  * Güncellenen versiyon
  */
 
+function getAuthToken() {
+  return localStorage.getItem('jwt_token');
+}
+
 // Document Ready
 document.addEventListener('DOMContentLoaded', function() {
     // Otomatik kapanan uyarılar

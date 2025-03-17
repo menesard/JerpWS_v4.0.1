@@ -90,8 +90,9 @@ class Customer(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # İlişkiler
-    transactions = db.relationship('CustomerTransaction', backref='customer', lazy='dynamic')
-
+    transactions = db.relationship('CustomerTransaction',
+                                   backref=db.backref('customer_ref', uselist=False),
+                                   lazy='dynamic')
     def __repr__(self):
         return f"<Customer {self.name}>"
 
@@ -121,12 +122,13 @@ class CustomerTransaction(db.Model):
     labor_percentage = db.Column(db.Float, default=0)  # İşçilik yüzdesi (%)
     labor_pure_gold = db.Column(db.Float, default=0)  # İşçilik has altın karşılığı
     notes = db.Column(db.Text)
-    used_in_transfer = db.Column(db.Boolean, default=False)  # Devirde kullanıldı mı
+    used_in_transfer = db.Column(db.Boolean, default=False, nullable=False)
     transfer_id = db.Column(db.Integer, db.ForeignKey('transfers.id'), nullable=True)
 
 
+
     # Düzenleme ile ilgili yeni alanlar
-    customer = db.relationship('Customer', backref='transactions')
+    customer = db.relationship('Customer')
     setting = db.relationship('Setting')
     transfer = db.relationship('Transfer', backref='transactions')
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))

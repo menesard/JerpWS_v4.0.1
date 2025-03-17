@@ -172,8 +172,9 @@ def operations():
         return redirect(url_for('main.operations'))
 
     # Bölgeleri al
-    regions = ['safe', 'table', 'polish', 'melting', 'saw', 'acid']
-    formatted_regions = [{'name': region, 'name_tr': change_region_tr(region)} for region in regions]
+    # Bölgeleri veritabanından al ve sadece aktif olanları göster
+    regions = Region.query.filter_by(is_active=True).all()
+    formatted_regions = [{'name': region.name, 'name_tr': change_region_tr(region.name)} for region in regions]
 
     return render_template(
         'operations.html',
