@@ -252,21 +252,21 @@
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script src="{{ url_for('static', filename='js/mobile.js') }}"></script>
     <script>
-      // Cookie'den JWT tokenını al ve localStorage'a kaydet
-      document.addEventListener('DOMContentLoaded', function() {
-        const getCookie = function(name) {
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop().split(';').shift();
-        };
+// Cookie'den JWT tokenını al ve localStorage'a kaydet
+document.addEventListener('DOMContentLoaded', function() {
+  const getCookie = function(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  };
 
-        const token = getCookie('jwt_token');
-        if (token) {
-          localStorage.setItem('jwt_token', token);
-          // Token kullanıldıktan sonra cookie'yi temizle
-          document.cookie = 'jwt_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        }
-      });
+  const token = getCookie('jwt_token');
+  if (token) {
+    localStorage.setItem('jwt_token', token);
+    // Token kullanıldıktan sonra cookie'yi temizle
+    document.cookie = 'jwt_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  }
+});
     </script>
     {% block scripts %}{% endblock %}
 </body>

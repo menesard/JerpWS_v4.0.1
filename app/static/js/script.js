@@ -456,7 +456,7 @@ async function apiRequest(url, method = 'GET', data = null, includeToken = true)
 
         // Token ekle
         if (includeToken) {
-            const token = localStorage.getItem('jwt_token');
+            const token = getAuthToken(); // Burada getAuthToken kullanılmalı
             if (token) {
                 options.headers['Authorization'] = `Bearer ${token}`;
             }

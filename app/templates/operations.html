@@ -312,60 +312,64 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // İşlem gerçekleştirme API isteği
     async function performOperation(operation) {
-        try {
-            // İşlem verilerini hazırla
-            const data = {
-                operation_type: operation.operation_type,
-                region: operation.region,
-                gram: parseFloat(operation.gram),
-                setting: "{{ selected_setting }}"
-            };
+    try {
+        // İşlem verilerini hazırla
+        const data = {
+            operation_type: operation.operation_type,
+            region: operation.region,
+            gram: parseFloat(operation.gram),
+            setting: "{{ selected_setting }}"
+        };
 
-            // Doğru endpoint'i belirle
-            let endpoint = '/api/add_item';
-            if (operation.operation_type === 'subtract') {
-                endpoint = '/api/remove_item';
-            }
-
-            // Yükleme göstergesini göster
-            showLoading(true);
-
-            // API isteği gönder
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-
-            const result = await response.json();
-
-            // Yükleme göstergesini gizle
-            showLoading(false);
-
-            // Sonucu göster
-            if (response.ok) {
-                showOperationResult(true, 'İşlem Başarılı', result.message || 'İşlem başarıyla tamamlandı.');
-
-                // Son işlemleri yenile
-                loadRecentOperations();
-
-                // Bölge bilgilerini güncelle
-                updateRegionInfo();
-
-                // Formu sıfırla
-                gramInput.value = document.getElementById('weight-display').textContent;
-                operationForm.classList.remove('was-validated');
-            } else {
-                showOperationResult(false, 'İşlem Başarısız', result.error || 'İşlem gerçekleştirilemedi.');
-            }
-        } catch (error) {
-            showLoading(false);
-            showOperationResult(false, 'Hata', 'Bir hata oluştu: ' + error.message);
-            console.error('İşlem hatası:', error);
+        // Doğru endpoint'i belirle
+        let endpoint = '/api/add_item';
+        if (operation.operation_type === 'subtract') {
+            endpoint = '/api/remove_item';
         }
+
+        // Yükleme göstergesini göster
+        showLoading(true);
+
+        // Token'ı al
+        const token = getAuthToken();
+
+        // API isteği gönder
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        // Yükleme göstergesini gizle
+        showLoading(false);
+
+        // Sonucu göster
+        if (response.ok) {
+            showOperationResult(true, 'İşlem Başarılı', result.message || 'İşlem başarıyla tamamlandı.');
+
+            // Son işlemleri yenile
+            loadRecentOperations();
+
+            // Bölge bilgilerini güncelle
+            updateRegionInfo();
+
+            // Formu sıfırla
+            gramInput.value = document.getElementById('weight-display').textContent;
+            operationForm.classList.remove('was-validated');
+        } else {
+            showOperationResult(false, 'İşlem Başarısız', result.error || 'İşlem gerçekleştirilemedi.');
+        }
+    } catch (error) {
+        showLoading(false);
+        showOperationResult(false, 'Hata', 'Bir hata oluştu: ' + error.message);
+        console.error('İşlem hatası:', error);
     }
+}
 
     // Bölge bilgilerini güncelleme
     async function updateRegionInfo() {
