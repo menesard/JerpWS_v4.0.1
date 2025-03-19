@@ -44,20 +44,27 @@
                         </div>
                     </div>
 
+                    <!-- Bölge seçimi kısmında kasa bölgesini devre dışı bırakma -->
                     <div class="mb-3">
                         <label for="region" class="form-label">Bölge <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
                             <select class="form-select" id="region" name="region" required>
                                 {% for region in regions %}
-                                <option value="{{ region.name }}" {% if request.args.get('region') == region.name %}selected{% endif %}>
-                                    {{ region.name_tr|capitalize }}
-                                </option>
+                                    {% if region.name != 'safe' and region.name != 'kasa' %}
+                                        <option value="{{ region.name }}" {% if request.args.get('region') == region.name %}selected{% endif %}>
+                                            {{ region.name_tr|capitalize }}
+                                        </option>
+                                    {% endif %}
                                 {% endfor %}
                             </select>
                             <div class="invalid-feedback">
                                 Lütfen bir bölge seçin.
                             </div>
+                        </div>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Kasa bölgesi sadece müşteri işlemleri üzerinden otomatik olarak güncellenir.
                         </div>
                     </div>
 
@@ -97,14 +104,7 @@
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush">
-                    <a href="#" class="list-group-item list-group-item-action quick-op" data-region="table" data-op="add">
-                        <div class="d-flex align-items-center">
-                            <div class="quick-op-icon bg-success me-3">
-                                <i class="fas fa-arrow-right text-white"></i>
-                            </div>
-                            <span>Kasadan Masaya Al</span>
-                        </div>
-                    </a>
+                    <!-- Kasadan Masaya Al işlemini kaldırdık -->
                     <a href="#" class="list-group-item list-group-item-action quick-op" data-region="table" data-op="subtract">
                         <div class="d-flex align-items-center">
                             <div class="quick-op-icon bg-danger me-3">
@@ -155,6 +155,8 @@
             </div>
         </div>
 
+        <!-- Bilgi Kartı -->
+        <!-- Bilgi Kartı -->
         <div class="card shadow d-none d-md-block">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Bölge Bilgileri</h5>
@@ -169,6 +171,10 @@
                             <div class="d-flex justify-content-between">
                                 <span class="text-muted"><i class="fas fa-vault me-2"></i>Kasa:</span>
                                 <span class="fw-bold region-amount" data-region="safe">Yükleniyor...</span>
+                            </div>
+                            <div class="small text-muted mt-1">
+                                <i class="fas fa-lock me-1"></i>
+                                Kasa bölgesi sadece müşteri işlemlerinden etkilenir, manuel işlemler yapılamaz.
                             </div>
                         </li>
                         <li class="list-group-item">
@@ -785,6 +791,74 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
 
     document.head.appendChild(style);
+});
+
+    // operations.html içindeki script bölümüne eklenecek kodlar
+document.addEventListener('DOMContentLoaded', function() {
+    // İşlem formu
+    const operationForm = document.getElementById('operationForm');
+    const regionSelect = document.getElementById('region');
+
+    // Hızlı işlem için kasa kontrolü ekleyelim
+    const quickOpLinks = document.querySelectorAll('.quick-op');
+    quickOpLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const region = this.getAttribute('data-region');
+            // Eğer hedef bölge kasa ise işlemi engelle
+            if (region === 'safe') {
+                showNotification('Kasa bölgesine manuel işlem yapılamaz!', 'warning');
+                return;
+            }
+
+            const operation = this.getAttribute('data-op');
+
+            // Form değerlerini güncelle
+            regionSelect.value = region;
+
+            document.querySelectorAll('input[name="operation_type"]').forEach(radio => {
+                if (radio.value === operation) {
+                    radio.checked = true;
+                }
+            });
+
+            // Terazi değerini al
+            updateGramFromScale();
+
+            // Form'a odaklan
+            gramInput.focus();
+        });
+    });
+
+    // Form gönderim kontrolü
+    if (operationForm) {
+        operationForm.addEventListener('submit', function(e) {
+            // Seçilen bölgeyi kontrol et
+            const selectedRegion = regionSelect.value;
+            const regionOption = regionSelect.querySelector(`option[value="${selectedRegion}"]`);
+
+            // Kasa bölgesi seçilmişse engelle
+            if (regionOption && regionOption.getAttribute('data-is-safe') === 'true') {
+                e.preventDefault();
+                showNotification('Kasa bölgesine manuel işlem yapılamaz!', 'warning');
+                return false;
+            }
+
+            // Form doğrulaması
+            if (!operationForm.checkValidity()) {
+                e.preventDefault();
+                operationForm.classList.add('was-validated');
+
+                // İlk hatalı alana odaklan
+                const firstInvalid = operationForm.querySelector(':invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                }
+                return false;
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

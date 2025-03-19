@@ -96,6 +96,10 @@ def add_item():
     if not region or not setting or not gram:
         return jsonify({"error": "Eksik parametreler"}), 400
 
+    # Kasa bölgesine manuel işlem yapılmasını engelle
+    if region == 'safe':
+        return jsonify({"error": "Kasa bölgesine manuel işlem yapılamaz"}), 400
+
     # Kullanıcı kimliğini al
     current_user = User.query.filter_by(username=get_jwt_identity()).first()
 
@@ -104,11 +108,7 @@ def add_item():
 
     try:
         gram = float(gram)
-
-        if region == 'safe':
-            result = SystemManager.add_item_safe(setting, gram, current_user.id)
-        else:
-            result = SystemManager.add_item(region, setting, gram, current_user.id)
+        result = SystemManager.add_item(region, setting, gram, current_user.id)
 
         if result:
             return jsonify({"message": "İşlem başarılı"}), 200
@@ -135,6 +135,10 @@ def remove_item():
     if not region or not setting or not gram:
         return jsonify({"error": "Eksik parametreler"}), 400
 
+    # Kasa bölgesine manuel işlem yapılmasını engelle
+    if region == 'safe':
+        return jsonify({"error": "Kasa bölgesine manuel işlem yapılamaz"}), 400
+
     current_user = User.query.filter_by(username=get_jwt_identity()).first()
 
     if not current_user:
@@ -142,11 +146,7 @@ def remove_item():
 
     try:
         gram = float(gram)
-
-        if region == 'safe':
-            result = SystemManager.remove_item_safe(setting, gram, current_user.id)
-        else:
-            result = SystemManager.remove_item(region, setting, gram, current_user.id)
+        result = SystemManager.remove_item(region, setting, gram, current_user.id)
 
         if result:
             return jsonify({"message": "İşlem başarılı"}), 200
@@ -362,15 +362,21 @@ def add_customer_transaction(customer_id):
 @api_bp.route('/regions', methods=['GET'])
 @jwt_required()
 def get_regions():
-    """Tüm bölgeleri döndür"""
-    regions = Region.query.filter_by(is_active=True).all()
+    """Tüm bölgeleri döndür (kasa bölgesi hariç)"""
+    # Tüm aktif bölgeleri al
+    all_regions = Region.query.filter_by(is_active=True).all()
+
+    # Kasa bölgesini filtrele
     result = []
-    for region in regions:
-        result.append({
-            "id": region.id,
-            "name": region.name,
-            "is_default": region.is_default
-        })
+    for region in all_regions:
+        # Kasa veya safe bölgelerini hariç tut
+        if region.name not in ['safe', 'kasa']:
+            result.append({
+                "id": region.id,
+                "name": region.name,
+                "is_default": region.is_default
+            })
+
     return jsonify({"regions": result}), 200
 
 
@@ -404,6 +410,41 @@ def delete_region(region_id):
         return jsonify({"error": "Bu işlem için yetkiniz yok"}), 403
 
     success, message = SystemManager.deactivate_region(region_id)
+    if success:
+        return jsonify({"message": message}), 200
+    else:
+        return jsonify({"error": message}), 400
+
+
+@api_bp.route('/regions/deleted', methods=['GET'])
+@jwt_required()
+def get_deleted_regions():
+    """Silinmiş bölgeleri döndür"""
+    # Admin kontrolü
+    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    if not current_user or not current_user.is_admin:
+        return jsonify({"error": "Bu işlem için yetkiniz yok"}), 403
+
+    regions = Region.query.filter_by(is_active=False).all()
+    result = []
+    for region in regions:
+        result.append({
+            "id": region.id,
+            "name": region.name,
+            "is_default": region.is_default
+        })
+    return jsonify({"deleted_regions": result}), 200
+
+@api_bp.route('/regions/<int:region_id>/restore', methods=['POST'])
+@jwt_required()
+def restore_region(region_id):
+    """Silinen bölgeyi geri yükle"""
+    # Admin kontrolü
+    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    if not current_user or not current_user.is_admin:
+        return jsonify({"error": "Bu işlem için yetkiniz yok"}), 403
+
+    success, message = SystemManager.activate_region(region_id)
     if success:
         return jsonify({"message": message}), 200
     else:

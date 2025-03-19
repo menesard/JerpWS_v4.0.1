@@ -10,9 +10,37 @@ from sqlalchemy import func
 class SystemManager:
     @staticmethod
     def get_region_id(region_name):
-        """Bölge adından ID'yi al"""
-        region = Region.query.filter_by(name=region_name).first()
+        """Bölge adından ID'yi al (sadece aktif bölgeler)"""
+        region = Region.query.filter_by(name=region_name, is_active=True).first()
         return region.id if region else None
+
+    @staticmethod
+    def get_region_status(region_name, setting_name):
+        """Belirli bir bölgedeki belirli bir ayarın stok durumunu hesapla"""
+        region = Region.query.filter_by(name=region_name, is_active=True).first()
+        setting = Setting.query.filter_by(name=setting_name).first()
+
+        if not region or not setting:
+            return {setting_name: 0}
+
+        # Eklenen toplam
+        added = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
+            Operation.target_region_id == region.id,
+            Operation.setting_id == setting.id,
+            Operation.operation_type == OPERATION_ADD
+        ).scalar()
+
+        # Çıkarılan toplam
+        subtracted = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
+            Operation.source_region_id == region.id,
+            Operation.setting_id == setting.id,
+            Operation.operation_type == OPERATION_SUBTRACT
+        ).scalar()
+
+        # Net stok miktarını hesapla
+        net_stock = float(added - subtracted)
+
+        return {setting_name: net_stock}
 
     @staticmethod
     def get_setting_id(setting_name):
@@ -171,7 +199,8 @@ class SystemManager:
             return {}
 
         status = {}
-        regions = Region.query.all()
+        # Sadece aktif bölgeleri al
+        regions = Region.query.filter_by(is_active=True).all()
 
         for region in regions:
             region_name = region.name
@@ -321,19 +350,53 @@ class SystemManager:
         )
 
         db.session.add(transaction)
+        db.session.flush()  # ID ataması için
 
-        # Kasadan ürün çıkışı veya hurda çıkışı için kasa stokunu güncelle
-        if transaction_type in [TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_OUT]:
-            # Bu işlemler kasadan direk çıkış yapar
-            SystemManager.remove_item_safe(setting_name, gram, user_id=user_id)
+        try:
+            # Kasa bölgesini al
+            safe_region = Region.query.filter_by(name='kasa', is_active=True).first()
+            if not safe_region:
+                # Eğer "kasa" bulunamazsa, "safe" olarak da dene
+                safe_region = Region.query.filter_by(name='safe', is_active=True).first()
 
-        # Ürün girişi veya hurda girişi için kasa stokunu güncelle
-        elif transaction_type in [TRANSACTION_PRODUCT_IN, TRANSACTION_SCRAP_IN]:
-            # Bu işlemler kasaya direk giriş yapar
-            SystemManager.add_item_safe(setting_name, gram, user_id=user_id)
+            if not safe_region:
+                # Yine bulunamazsa hata döndür
+                db.session.rollback()
+                return False
 
-        db.session.commit()
-        return transaction
+            safe_id = safe_region.id
+
+            # Ürün çıkışı veya hurda çıkışı için kasa stokunu güncelle
+            if transaction_type in [TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_OUT]:
+                # Müşteriye ürün/hurda veriliyor - kasadan çıkarılır
+                operation = Operation(
+                    operation_type=OPERATION_SUBTRACT,
+                    source_region_id=safe_id,
+                    setting_id=setting.id,
+                    gram=float(gram),
+                    user_id=user_id
+                )
+                db.session.add(operation)
+
+            # Ürün girişi veya hurda girişi için kasa stokunu güncelle
+            elif transaction_type in [TRANSACTION_PRODUCT_IN, TRANSACTION_SCRAP_IN]:
+                # Müşteriden ürün/hurda alınıyor - kasaya eklenir
+                operation = Operation(
+                    operation_type=OPERATION_ADD,
+                    target_region_id=safe_id,
+                    setting_id=setting.id,
+                    gram=float(gram),
+                    user_id=user_id
+                )
+                db.session.add(operation)
+
+            db.session.commit()
+            return transaction
+        except Exception as e:
+            # Hata durumunda işlemi geri al
+            db.session.rollback()
+            print(f"Müşteri işlemi eklerken hata: {str(e)}")
+            return False
 
     @staticmethod
     def get_customer_balance(customer_id, setting_name=None):
@@ -372,7 +435,7 @@ class SystemManager:
             }
 
         return balances
-    @staticmethod
+
     @staticmethod
     def get_customer_pure_gold_balance(customer_id):
         """Müşteri has altın bakiyesini hesapla"""
@@ -671,7 +734,7 @@ class SystemManager:
         if Region.query.filter_by(name=name).first():
             return False, "Bu isimde bir bölge zaten var"
 
-        region = Region(name=name)
+        region = Region(name=name, is_active=True)
         db.session.add(region)
         db.session.commit()
         return True, "Bölge başarıyla eklendi"
@@ -702,13 +765,32 @@ class SystemManager:
         return True, "Bölge başarıyla silindi"
 
     @staticmethod
+    def activate_region(region_id):
+        """Silinmiş bölgeyi aktif et"""
+        region = Region.query.get(region_id)
+        if not region:
+            return False, "Bölge bulunamadı"
+
+        # Bölge zaten aktif mi kontrol et
+        if region.is_active:
+            return False, "Bölge zaten aktif durumda"
+
+        # Aynı isimde aktif bölge var mı kontrol et
+        if Region.query.filter_by(name=region.name, is_active=True).first():
+            return False, "Bu isimde aktif bir bölge zaten var"
+
+        region.is_active = True
+        db.session.commit()
+        return True, "Bölge başarıyla geri yüklendi"
+
+    @staticmethod
     def create_ramat(user_id, actual_pure_gold, notes=None):
         """Ramat işlemi oluştur ve fire hesapla"""
         # Tüm bölgelerdeki altınları topla
         total_pure_gold = 0
         fire_details = []
 
-        # Aktif bölgeleri al
+        # Sadece aktif bölgeleri al
         regions = Region.query.filter_by(is_active=True).all()
 
         # Her bölge için ayar bazında detayları hesapla

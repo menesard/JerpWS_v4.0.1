@@ -124,6 +124,8 @@ def dashboard():
     )
 
 
+# İşlemler sayfasında sadece aktif bölgeleri gösterme
+
 @main_bp.route('/operations', methods=['GET', 'POST'])
 @login_required
 def operations():
@@ -146,20 +148,19 @@ def operations():
         region = request.form.get('region')
         gram = request.form.get('gram', type=float)
 
+        # Kasa bölgesine manuel işlem yapılmasını engelle
+        if region in ['safe', 'kasa']:
+            flash('Kasa bölgesine manuel işlem yapılamaz!', 'danger')
+            return redirect(url_for('main.operations'))
+
         if not gram:
             flash('Geçerli bir gram değeri giriniz!', 'danger')
         else:
             try:
                 if operation_type == 'add':
-                    if region == 'safe':
-                        result = SystemManager.add_item_safe(selected_setting, gram, current_user.id)
-                    else:
-                        result = SystemManager.add_item(region, selected_setting, gram, current_user.id)
+                    result = SystemManager.add_item(region, selected_setting, gram, current_user.id)
                 elif operation_type == 'subtract':
-                    if region == 'safe':
-                        result = SystemManager.remove_item_safe(selected_setting, gram, current_user.id)
-                    else:
-                        result = SystemManager.remove_item(region, selected_setting, gram, current_user.id)
+                    result = SystemManager.remove_item(region, selected_setting, gram, current_user.id)
 
                 if result:
                     flash('İşlem başarıyla tamamlandı!', 'success')
@@ -171,14 +172,17 @@ def operations():
 
         return redirect(url_for('main.operations'))
 
-    # Bölgeleri al
-    # Bölgeleri veritabanından al ve sadece aktif olanları göster
-    regions = Region.query.filter_by(is_active=True).all()
-    formatted_regions = [{'name': region.name, 'name_tr': change_region_tr(region.name)} for region in regions]
+    # Önce tüm aktif bölgeleri al
+    all_regions = Region.query.filter_by(is_active=True).all()
+
+    # Sonra kasa bölgesini filtrele (hem 'safe' hem de 'kasa' olabilir)
+    regions = [{'name': region.name, 'name_tr': change_region_tr(region.name)}
+               for region in all_regions
+               if region.name not in ['safe', 'kasa']]
 
     return render_template(
         'operations.html',
-        regions=formatted_regions,
+        regions=regions,
         weight=weight,
         weight_valid=is_valid,
         selected_setting=selected_setting
@@ -423,55 +427,25 @@ def add_customer_transaction(customer_id):
         else:
             try:
                 # Has değerleri için model uygunsa has hesaplamalarını kullan
-                if hasattr(CustomerTransaction, 'pure_gold_weight'):
-                    transaction = SystemManager.add_customer_transaction(
-                        customer_id=customer_id,
-                        transaction_type=transaction_type,
-                        setting_name=selected_setting,
-                        gram=gram,
-                        user_id=current_user.id,  # Kullanıcı ID'si eklendi
-                        product_description=product_description,
-                        unit_price=unit_price,
-                        labor_cost=labor_cost,
-                        purity_per_thousand=purity_per_thousand,
-                        labor_percentage=labor_percentage,
-                        notes=notes
-                    )
+                transaction = SystemManager.add_customer_transaction(
+                    customer_id=customer_id,
+                    transaction_type=transaction_type,
+                    setting_name=selected_setting,
+                    gram=gram,
+                    user_id=current_user.id,
+                    product_description=product_description,
+                    unit_price=unit_price,
+                    labor_cost=labor_cost,
+                    purity_per_thousand=purity_per_thousand,
+                    labor_percentage=labor_percentage,
+                    notes=notes
+                )
+
+                if transaction:
+                    flash('İşlem başarıyla eklendi!', 'success')
+                    return redirect(url_for('main.customer_detail', customer_id=customer_id))
                 else:
-                    # Eski methodu kullan
-                    customer = Customer.query.get(customer_id)
-                    setting_id = SystemManager.get_setting_id(selected_setting)
-
-                    if not customer or not setting_id:
-                        flash('Müşteri veya ayar bulunamadı!', 'danger')
-                        return redirect(url_for('main.customers'))
-
-                    transaction = CustomerTransaction(
-                        customer_id=customer_id,
-                        transaction_type=transaction_type,
-                        setting_id=setting_id,
-                        gram=float(gram),
-                        product_description=product_description,
-                        unit_price=unit_price,
-                        labor_cost=labor_cost,
-                        total_amount=total_amount,
-                        notes=notes
-                    )
-
-                    db.session.add(transaction)
-
-                    # Kasadan ürün çıkışı veya hurda çıkışı için kasa stokunu güncelle
-                    if transaction_type in [TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_OUT]:
-                        SystemManager.remove_item_safe(selected_setting, gram)
-
-                    # Ürün girişi veya hurda girişi için kasa stokunu güncelle
-                    elif transaction_type in [TRANSACTION_PRODUCT_IN, TRANSACTION_SCRAP_IN]:
-                        SystemManager.add_item_safe(selected_setting, gram)
-
-                    db.session.commit()
-
-                flash('İşlem başarıyla eklendi!', 'success')
-                return redirect(url_for('main.customer_detail', customer_id=customer_id))
+                    flash('İşlem eklenirken bir hata oluştu!', 'danger')
 
             except Exception as e:
                 flash(f'Hata oluştu: {str(e)}', 'danger')
@@ -494,7 +468,6 @@ def add_customer_transaction(customer_id):
         weight=weight,
         weight_valid=is_valid
     )
-
 
 @main_bp.route('/transactions/<int:transaction_id>')
 @login_required
@@ -756,6 +729,8 @@ def user_operations(user_id):
     return render_template('user_operations.html', user=user, operations=operations)
 
 
+# main_bp.route('/stock') fonksiyonunda yapılacak değişiklikler
+
 @main_bp.route('/stock')
 @login_required
 def stock():
@@ -766,9 +741,9 @@ def stock():
     # Tüm ayarları al
     settings = [setting.name for setting in Setting.query.all()]
 
-    # Bölgeleri al
-    regions = [{'name': region, 'name_tr': change_region_tr(region)} for region in
-               ['safe', 'table', 'polish', 'melting', 'saw', 'acid']]
+    # Sadece aktif bölgeleri al
+    regions = [{'name': region.name, 'name_tr': change_region_tr(region.name)}
+               for region in Region.query.filter_by(is_active=True).all()]
 
     # Her ayar için stok durumunu al
     stock_data = []
@@ -781,16 +756,19 @@ def stock():
         setting_total = 0
 
         for region, setting_data in status.items():
-            region_tr = change_region_tr(region)
-            for s, gram in setting_data.items():
-                stock_data.append({
-                    'region': region_tr,
-                    'region_en': region,
-                    'setting': s,
-                    'gram': f"{gram:.2f}"
-                })
-                # Toplam hesapla
-                setting_total += gram
+            # Sadece aktif bölgeleri göster
+            region_obj = Region.query.filter_by(name=region).first()
+            if region_obj and region_obj.is_active:
+                region_tr = change_region_tr(region)
+                for s, gram in setting_data.items():
+                    stock_data.append({
+                        'region': region_tr,
+                        'region_en': region,
+                        'setting': s,
+                        'gram': f"{gram:.2f}"
+                    })
+                    # Toplam hesapla
+                    setting_total += gram
 
         # Ayar için toplam ve has değer hesapla
         if setting_total > 0:
@@ -836,15 +814,24 @@ def manage_regions():
                     flash(message, 'success')
                 else:
                     flash(message, 'danger')
+        elif 'restore_region' in request.form:
+            region_id = request.form.get('region_id')
+            if region_id:
+                success, message = SystemManager.activate_region(int(region_id))
+                if success:
+                    flash(message, 'success')
+                else:
+                    flash(message, 'danger')
 
         return redirect(url_for('main.manage_regions'))
 
-    # Tüm bölgeleri getir
-    regions = Region.query.filter_by(is_active=True).all()
+    # Aktif ve silinen bölgeleri ayrı ayrı getir
+    active_regions = Region.query.filter_by(is_active=True).all()
+    deleted_regions = Region.query.filter_by(is_active=False).all()
 
     # Her bölgedeki toplam altını hesapla
     region_totals = {}
-    for region in regions:
+    for region in active_regions:
         region_totals[region.id] = 0
         for setting in Setting.query.all():
             status = SystemManager.get_region_status(region.name, setting.name)
@@ -852,7 +839,8 @@ def manage_regions():
 
     return render_template(
         'regions.html',
-        regions=regions,
+        active_regions=active_regions,
+        deleted_regions=deleted_regions,
         region_totals=region_totals
     )
 

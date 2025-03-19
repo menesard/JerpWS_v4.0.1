@@ -10,6 +10,9 @@
                 <i class="fas fa-map-marker-alt me-2"></i>Bölge Yönetimi
             </h2>
             <div class="mt-2 mt-md-0">
+                <button id="btn-show-deleted" class="btn btn-outline-danger me-2">
+                    <i class="fas fa-trash me-1"></i><span class="d-none d-md-inline-block">Silinen Bölgeler</span>
+                </button>
                 <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneline Dön</span>
                 </a>
@@ -55,8 +58,8 @@
     <div class="col-lg-8 mb-4">
         <div class="card shadow">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Bölge Listesi</h5>
-                <span class="badge bg-light text-dark">{{ regions|length }} Bölge</span>
+                <h5 class="mb-0" id="regions-table-title"><i class="fas fa-list me-2"></i>Aktif Bölgeler</h5>
+                <span class="badge bg-light text-dark" id="region-count">{{ active_regions|length }} Bölge</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -69,8 +72,8 @@
                                 <th class="text-end">İşlemler</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {% for region in regions %}
+                        <tbody id="active-regions-body">
+                            {% for region in active_regions %}
                             <tr>
                                 <td>
                                     {{ region.name|capitalize }}
@@ -79,11 +82,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if region.is_active %}
                                     <span class="badge bg-success">Aktif</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">Pasif</span>
-                                    {% endif %}
                                 </td>
                                 <td>{{ region_totals[region.id]|round(2) }} g</td>
                                 <td class="text-end">
@@ -102,7 +101,37 @@
                             <tr>
                                 <td colspan="4" class="text-center py-4">
                                     <div class="alert alert-info mb-0">
-                                        <i class="fas fa-info-circle me-2"></i>Henüz bölge bulunmuyor
+                                        <i class="fas fa-info-circle me-2"></i>Varsayılan bölgeler dışında aktif bölge bulunmuyor
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tbody id="deleted-regions-body" class="d-none">
+                            {% for region in deleted_regions %}
+                            <tr>
+                                <td>
+                                    {{ region.name|capitalize }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">Silinmiş</span>
+                                </td>
+                                <td>-</td>
+                                <td class="text-end">
+                                    <form method="post" class="d-inline-block">
+                                        <input type="hidden" name="restore_region" value="1">
+                                        <input type="hidden" name="region_id" value="{{ region.id }}">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Silinmiş bölge bulunmuyor
                                     </div>
                                 </td>
                             </tr>
@@ -126,10 +155,47 @@
                     <li class="mb-2">Varsayılan bölgeler (kasa, masa, yer) silinemez ve tüm işlemlerde kullanılabilir.</li>
                     <li class="mb-2">Bölge silme işlemi, sadece içerisinde hiç altın bulunmayan bölgeler için yapılabilir.</li>
                     <li class="mb-2">Silinen bölgelere ait geçmiş işlemler sistemde kayıtlı kalır, ancak bu bölgelerde yeni işlem yapılamaz.</li>
-                    <li>Kasa bölgesi direk işlem yapılamaz, sadece müşteri işlemleri üzerinden değişir.</li>
+                    <li>Kasa bölgesi doğrudan işlem yapılamaz, sadece müşteri işlemleri üzerinden değişir.</li>
                 </ul>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Silinen bölgeleri gösterme/gizleme
+    const btnShowDeleted = document.getElementById('btn-show-deleted');
+    const activeRegionsBody = document.getElementById('active-regions-body');
+    const deletedRegionsBody = document.getElementById('deleted-regions-body');
+    const regionsTableTitle = document.getElementById('regions-table-title');
+    const regionCount = document.getElementById('region-count');
+
+    let showingDeleted = false;
+
+    btnShowDeleted.addEventListener('click', function() {
+        showingDeleted = !showingDeleted;
+
+        if (showingDeleted) {
+            activeRegionsBody.classList.add('d-none');
+            deletedRegionsBody.classList.remove('d-none');
+            regionsTableTitle.innerHTML = '<i class="fas fa-trash me-2"></i>Silinen Bölgeler';
+            btnShowDeleted.innerHTML = '<i class="fas fa-list me-1"></i><span class="d-none d-md-inline-block">Aktif Bölgeler</span>';
+            btnShowDeleted.classList.remove('btn-outline-danger');
+            btnShowDeleted.classList.add('btn-outline-primary');
+            regionCount.textContent = '{{ deleted_regions|length }} Bölge';
+        } else {
+            activeRegionsBody.classList.remove('d-none');
+            deletedRegionsBody.classList.add('d-none');
+            regionsTableTitle.innerHTML = '<i class="fas fa-list me-2"></i>Aktif Bölgeler';
+            btnShowDeleted.innerHTML = '<i class="fas fa-trash me-1"></i><span class="d-none d-md-inline-block">Silinen Bölgeler</span>';
+            btnShowDeleted.classList.remove('btn-outline-primary');
+            btnShowDeleted.classList.add('btn-outline-danger');
+            regionCount.textContent = '{{ active_regions|length }} Bölge';
+        }
+    });
+});
+</script>
 {% endblock %}
