@@ -3,8 +3,31 @@ import time
 import random
 import threading
 import logging
+import os
+import platform
 
 logger = logging.getLogger(__name__)
+
+# Sistem türüne göre varsayılan port belirleme
+def get_default_port():
+    system = platform.system()
+    if system == 'Windows':
+        return "COM5"
+    elif system == 'Linux':
+        return "/dev/ttyUSB0"
+    elif system == 'Darwin':  # macOS
+        return "/dev/tty.usbserial"
+    else:
+        return "COM5"  # Varsayılan
+
+# Kullanılabilir portları listele
+def list_available_ports():
+    try:
+        import serial.tools.list_ports
+        return [port.device for port in serial.tools.list_ports.comports()]
+    except ImportError:
+        logger.warning("serial.tools.list_ports modülü bulunamadı")
+        return []
 
 
 def process_scale_data(line):
@@ -39,8 +62,9 @@ def process_scale_data(line):
 
 
 class Scale:
-    def __init__(self, port="COM5", baudrate=9600, timeout=1, simulation_mode=False):
-        self.port = port
+    def __init__(self, port=None, baudrate=9600, timeout=1, simulation_mode=False):
+        # Port belirtilmemişse varsayılan portu kullan
+        self.port = port or os.environ.get('SCALE_PORT', get_default_port())
         self.baudrate = baudrate
         self.timeout = timeout
         self.simulation_mode = simulation_mode
@@ -49,12 +73,17 @@ class Scale:
         self.is_connected = False
         self.lock = threading.Lock()
 
+        # Kullanılabilir portları göster
+        available_ports = list_available_ports()
+        if available_ports:
+            logger.info("Kullanılabilir portlar: %s", available_ports)
+
         if not simulation_mode:
             try:
-                self.ser = serial.Serial(port, baudrate, timeout=timeout)
+                self.ser = serial.Serial(self.port, baudrate, timeout=timeout)
                 time.sleep(2)  # Bağlantının kurulması için bekle
                 self.is_connected = True
-                logger.info("Terazi bağlantısı kuruldu: %s", port)
+                logger.info("Terazi bağlantısı kuruldu: %s", self.port)
             except Exception as e:
                 logger.error("Terazi bağlantı hatası: %s", str(e))
                 self.is_connected = False
