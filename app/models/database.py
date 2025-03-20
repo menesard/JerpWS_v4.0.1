@@ -160,14 +160,14 @@ def init_db():
     ]
 
     # Normal bölgeler
-    normal_regions = ['polish', 'melting', 'saw', 'acid']
+    normal_regions = []
 
     # Varsayılan bölgeleri ekle
     for region_data in default_regions:
         if not Region.query.filter_by(name=region_data['name']).first():
             region = Region(
                 name=region_data['name'],
-                is_default=True,
+                is_default=region_data.get('is_default', False),
                 is_active=True
             )
             db.session.add(region)
@@ -181,6 +181,7 @@ def init_db():
                 is_active=True
             )
             db.session.add(region)
+
 
     settings_data = [
         {'name': '8', 'purity_per_thousand': 333},

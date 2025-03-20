@@ -11,9 +11,19 @@ class SystemManager:
     @staticmethod
     def get_region_id(region_name):
         """Bölge adından ID'yi al (sadece aktif bölgeler)"""
-        region = Region.query.filter_by(name=region_name, is_active=True).first()
-        return region.id if region else None
+        # Olası farklı yazım şekillerini kontrol et
+        region_mappings = {
+            'table': 'masa',
+            'safe': 'kasa',
+            'masa': 'masa',
+            'kasa': 'kasa'
+        }
 
+        # Bölge adını eşleştir
+        mapped_region_name = region_mappings.get(region_name.lower(), region_name)
+
+        region = Region.query.filter_by(name=mapped_region_name, is_active=True).first()
+        return region.id if region else None
     @staticmethod
     def get_region_status(region_name, setting_name):
         """Belirli bir bölgedeki belirli bir ayarın stok durumunu hesapla"""
@@ -88,68 +98,80 @@ class SystemManager:
 
     @staticmethod
     def add_item(region_name, setting_name, gram, user_id=None):
-        """Bölgeye altın ekle (masa üzerinden)"""
+        """Bölgeye altın ekle"""
         region_id = SystemManager.get_region_id(region_name)
         setting_id = SystemManager.get_setting_id(setting_name)
         table_id = SystemManager.get_region_id('table')
         safe_id = SystemManager.get_region_id('safe')
 
-        if region_id and setting_id:
-            if region_name != 'table':
-                # Masadan bölgeye transfer
-                subtract_op = Operation(
+        if not region_id or not setting_id:
+            return False
+
+        try:
+            # Kasa ve masa dışındaki bölgeler için özel işlem
+            if region_name not in ['table', 'safe']:
+                # Masa'dan bölgeye transfer
+                table_subtract_op = Operation(
                     operation_type=OPERATION_SUBTRACT,
                     source_region_id=table_id,
                     target_region_id=region_id,
                     setting_id=setting_id,
                     gram=float(gram),
-                    user_id=user_id  # Kullanıcı ID'si eklendi
+                    user_id=user_id
                 )
-                add_op = Operation(
+                table_add_op = Operation(
                     operation_type=OPERATION_ADD,
                     target_region_id=region_id,
                     setting_id=setting_id,
                     gram=float(gram),
-                    user_id=user_id  # Kullanıcı ID'si eklendi
+                    user_id=user_id
                 )
-                db.session.add(subtract_op)
-                db.session.add(add_op)
-            else:
-                # Kasadan masaya transfer
-                subtract_op = Operation(
+                db.session.add(table_subtract_op)
+                db.session.add(table_add_op)
+
+            # Masa'ya ekleme (kasa'dan transfer)
+            elif region_name == 'table':
+                safe_subtract_op = Operation(
                     operation_type=OPERATION_SUBTRACT,
                     source_region_id=safe_id,
                     target_region_id=table_id,
                     setting_id=setting_id,
                     gram=float(gram),
-                    user_id=user_id  # Kullanıcı ID'si eklendi
+                    user_id=user_id
                 )
-                add_op = Operation(
+                table_add_op = Operation(
                     operation_type=OPERATION_ADD,
                     target_region_id=table_id,
                     setting_id=setting_id,
                     gram=float(gram),
-                    user_id=user_id  # Kullanıcı ID'si eklendi
+                    user_id=user_id
                 )
-                db.session.add(subtract_op)
-                db.session.add(add_op)
+                db.session.add(safe_subtract_op)
+                db.session.add(table_add_op)
 
             db.session.commit()
             return True
-        return False
+        except Exception as e:
+            db.session.rollback()
+            print(f"Add item error: {str(e)}")
+            return False
 
     @staticmethod
     def remove_item(region_name, setting_name, gram, user_id=None):
-        """Bölgeden altın çıkar (masa üzerinden)"""
+        """Bölgeden altın çıkar"""
         region_id = SystemManager.get_region_id(region_name)
         setting_id = SystemManager.get_setting_id(setting_name)
         table_id = SystemManager.get_region_id('table')
         safe_id = SystemManager.get_region_id('safe')
 
-        if region_id and setting_id:
-            if region_name != 'table':
-                # Bölgeden masaya transfer
-                subtract_op = Operation(
+        if not region_id or not setting_id:
+            return False
+
+        try:
+            # Kasa ve masa dışındaki bölgeler için özel işlem
+            if region_name not in ['table', 'safe']:
+                # Bölgeden masa'ya transfer
+                region_subtract_op = Operation(
                     operation_type=OPERATION_SUBTRACT,
                     source_region_id=region_id,
                     target_region_id=table_id,
@@ -157,39 +179,42 @@ class SystemManager:
                     gram=float(gram),
                     user_id=user_id
                 )
-                add_op = Operation(
+                table_add_op = Operation(
                     operation_type=OPERATION_ADD,
                     target_region_id=table_id,
                     setting_id=setting_id,
                     gram=float(gram),
                     user_id=user_id
                 )
-                db.session.add(subtract_op)
-                db.session.add(add_op)
-            else:
-                # Masadan kasaya transfer
-                subtract_op = Operation(
+                db.session.add(region_subtract_op)
+                db.session.add(table_add_op)
+
+            # Masa'dan çıkarma (kasa'ya transfer)
+            elif region_name == 'table':
+                table_subtract_op = Operation(
                     operation_type=OPERATION_SUBTRACT,
                     source_region_id=table_id,
                     target_region_id=safe_id,
                     setting_id=setting_id,
                     gram=float(gram),
                     user_id=user_id
-
                 )
-                add_op = Operation(
+                safe_add_op = Operation(
                     operation_type=OPERATION_ADD,
                     target_region_id=safe_id,
                     setting_id=setting_id,
                     gram=float(gram),
                     user_id=user_id
                 )
-                db.session.add(subtract_op)
-                db.session.add(add_op)
+                db.session.add(table_subtract_op)
+                db.session.add(safe_add_op)
 
             db.session.commit()
             return True
-        return False
+        except Exception as e:
+            db.session.rollback()
+            print(f"Remove item error: {str(e)}")
+            return False
 
     @staticmethod
     def get_status(setting_name):
