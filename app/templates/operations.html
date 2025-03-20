@@ -256,6 +256,10 @@
                 </div>
                 <h4 id="operation-result-title" class="mb-3">İşlem Başarılı</h4>
                 <p id="operation-result-message" class="mb-0">İşlem başarıyla tamamlandı.</p>
+                <div id="operation-result-details" class="mt-3 text-start d-none">
+                    <h5>Teknik Detaylar:</h5>
+                    <pre class="error-details bg-light p-2 rounded" style="max-height: 200px; overflow-y: auto;"></pre>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Tamam</button>
@@ -287,10 +291,23 @@ document.addEventListener('DOMContentLoaded', function() {
         if (operationForm.checkValidity()) {
             // Form verilerini al
             const formData = new FormData(operationForm);
-            const operation = Object.fromEntries(formData.entries());
 
-            // İşlem gerçekleştirme API isteği
-            performOperation(operation);
+            // Seçilen bölgenin geçerli olup olmadığını kontrol et
+            const selectedRegion = formData.get('region');
+            if (selectedRegion === 'safe' || selectedRegion === 'kasa') {
+                showNotification('Kasa bölgesine manuel işlem yapılamaz!', 'warning');
+                return false;
+            }
+
+            // Gram değerini kontrol et
+            const gramValue = parseFloat(formData.get('gram'));
+            if (!gramValue || isNaN(gramValue) || gramValue <= 0) {
+                showNotification('Geçerli bir gram değeri giriniz!', 'warning');
+                return false;
+            }
+
+            // Form gönderimi
+            operationForm.submit();
         } else {
             // Form doğrulamasını göster
             operationForm.classList.add('was-validated');
@@ -314,155 +331,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             submitForm();
         });
-    }
-
-    // İşlem gerçekleştirme API isteği
-    async function performOperation(operation) {
-    try {
-        // İşlem verilerini hazırla
-        const data = {
-            operation_type: operation.operation_type,
-            region: operation.region,
-            gram: parseFloat(operation.gram),
-            setting: "{{ selected_setting }}"
-        };
-
-        // Doğru endpoint'i belirle
-        let endpoint = '/api/add_item';
-        if (operation.operation_type === 'subtract') {
-            endpoint = '/api/remove_item';
-        }
-
-        // Yükleme göstergesini göster
-        showLoading(true);
-
-        // Token'ı al
-        const token = getAuthToken();
-
-        // API isteği gönder
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token ? `Bearer ${token}` : ''
-            },
-            body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
-
-        // Yükleme göstergesini gizle
-        showLoading(false);
-
-        // Sonucu göster
-        if (response.ok) {
-            showOperationResult(true, 'İşlem Başarılı', result.message || 'İşlem başarıyla tamamlandı.');
-
-            // Son işlemleri yenile
-            loadRecentOperations();
-
-            // Bölge bilgilerini güncelle
-            updateRegionInfo();
-
-            // Formu sıfırla
-            gramInput.value = document.getElementById('weight-display').textContent;
-            operationForm.classList.remove('was-validated');
-        } else {
-            showOperationResult(false, 'İşlem Başarısız', result.error || 'İşlem gerçekleştirilemedi.');
-        }
-    } catch (error) {
-        showLoading(false);
-        showOperationResult(false, 'Hata', 'Bir hata oluştu: ' + error.message);
-        console.error('İşlem hatası:', error);
-    }
-}
-
-    // Bölge bilgilerini güncelleme
-    async function updateRegionInfo() {
-        try {
-            const response = await fetch(`/api/status/${encodeURIComponent('{{ selected_setting }}')}`, {
-                method: 'GET'
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                const status = data.status;
-
-                // Bölge miktarlarını güncelle
-                document.querySelectorAll('.region-amount').forEach(element => {
-                    const region = element.getAttribute('data-region');
-                    if (status[region] && status[region]['{{ selected_setting }}'] !== undefined) {
-                        const amount = status[region]['{{ selected_setting }}'];
-                        element.textContent = amount.toFixed(2) + ' g';
-
-                        // Miktara göre renklendir
-                        if (amount > 0) {
-                            element.classList.add('text-success');
-                            element.classList.remove('text-muted');
-                        } else {
-                            element.classList.remove('text-success');
-                            element.classList.add('text-muted');
-                        }
-                    } else {
-                        element.textContent = '0.00 g';
-                        element.classList.remove('text-success');
-                        element.classList.add('text-muted');
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Bölge bilgileri alınamadı:', error);
-        }
-    }
-
-    // Son işlemleri yükleme
-    async function loadRecentOperations() {
-        try {
-            const response = await fetch('/api/logs?limit=5', {
-                method: 'GET'
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                const logs = data.logs;
-
-                // Tablo içeriğini güncelle
-                const tbody = document.querySelector('#recent-operations tbody');
-                tbody.innerHTML = '';
-
-                if (logs.length === 0) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="7" class="text-center py-3">
-                                <div class="alert alert-info mb-0">
-                                    <i class="fas fa-info-circle me-2"></i>Henüz işlem kaydı bulunmuyor
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                } else {
-                    logs.forEach(log => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td data-label="Zaman">${log.time}</td>
-                            <td data-label="İşlem">
-                                <span class="badge ${log.operation_type === 'ADD' ? 'bg-success' : 'bg-danger'}">
-                                    ${log.operation_type === 'ADD' ? 'EKLEME' : 'ÇIKARMA'}
-                                </span>
-                            </td>
-                            <td data-label="Kaynak">${log.source_region || '-'}</td>
-                            <td data-label="Hedef">${log.target_region || '-'}</td>
-                            <td data-label="Ayar">${log.setting}</td>
-                            <td data-label="Gram">${log.gram}</td>
-                            <td data-label="Kullanıcı" class="d-none d-md-table-cell">${log.username}</td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                }
-            }
-        } catch (error) {
-            console.error('İşlem kayıtları alınamadı:', error);
-        }
     }
 
     // Teraziden Al butonları
@@ -502,7 +370,91 @@ document.addEventListener('DOMContentLoaded', function() {
         useScaleBtn.addEventListener('click', updateGramFromScale);
     }
 
-    // Terazi ağırlığını periyodik olarak güncelle
+    // Bölge bilgilerini yükle
+    function updateRegionInfo() {
+        fetch(`/api/status/${encodeURIComponent('{{ selected_setting }}')}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.status) {
+                    const status = data.status;
+                    document.querySelectorAll('.region-amount').forEach(element => {
+                        const region = element.getAttribute('data-region');
+                        if (status[region] && status[region]['{{ selected_setting }}'] !== undefined) {
+                            const amount = status[region]['{{ selected_setting }}'];
+                            element.textContent = amount.toFixed(2) + ' g';
+
+                            if (amount > 0) {
+                                element.classList.add('text-success');
+                                element.classList.remove('text-muted');
+                            } else {
+                                element.classList.remove('text-success');
+                                element.classList.add('text-muted');
+                            }
+                        } else {
+                            element.textContent = '0.00 g';
+                            element.classList.remove('text-success');
+                            element.classList.add('text-muted');
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Bölge bilgileri alınamadı:', error);
+            });
+    }
+
+    // Son işlemleri yükle
+    function loadRecentOperations() {
+        fetch('/api/logs?limit=5')
+            .then(response => response.json())
+            .then(data => {
+                const logs = data.logs;
+                const tbody = document.querySelector('#recent-operations tbody');
+
+                if (tbody) {
+                    tbody.innerHTML = '';
+
+                    if (logs.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="7" class="text-center py-3">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Henüz işlem kaydı bulunmuyor
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        logs.forEach(log => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td data-label="Zaman">${log.time}</td>
+                                <td data-label="İşlem">
+                                    <span class="badge ${log.operation_type === 'ADD' ? 'bg-success' : 'bg-danger'}">
+                                        ${log.operation_type === 'ADD' ? 'EKLEME' : 'ÇIKARMA'}
+                                    </span>
+                                </td>
+                                <td data-label="Kaynak">${log.source_region || '-'}</td>
+                                <td data-label="Hedef">${log.target_region || '-'}</td>
+                                <td data-label="Ayar">${log.setting}</td>
+                                <td data-label="Gram">${log.gram}</td>
+                                <td data-label="Kullanıcı" class="d-none d-md-table-cell">${log.username}</td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('İşlem kayıtları alınamadı:', error);
+            });
+    }
+
+    // Sayfa yüklendiğinde çağır
+    updateRegionInfo();
+    loadRecentOperations();
+
+    // Ağırlık güncellemesi
     function updateWeight() {
         fetch('/api/weight')
             .then(response => response.json())
@@ -513,8 +465,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     if (displayElement) {
                         displayElement.textContent = data.weight.toFixed(2);
-
-                        // Ağırlık değişimi animasyonu
                         displayElement.classList.add('weight-updated');
                         setTimeout(() => {
                             displayElement.classList.remove('weight-updated');
@@ -541,8 +491,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // İlk yükleme
     updateWeight();
-    loadRecentOperations();
-    updateRegionInfo();
 
     // Her 1 saniyede bir ağırlığı güncelle
     const weightUpdateInterval = setInterval(updateWeight, 1000);
@@ -552,52 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
         clearInterval(weightUpdateInterval);
     });
 
-    // Yükleme göstergesi
-    function showLoading(show) {
-        const loadingElement = document.querySelector('.loading-overlay');
-
-        if (show) {
-            if (!loadingElement) {
-                const overlay = document.createElement('div');
-                overlay.className = 'loading-overlay';
-                overlay.innerHTML = `
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Yükleniyor...</span>
-                    </div>
-                `;
-                document.body.appendChild(overlay);
-            }
-        } else {
-            if (loadingElement) {
-                loadingElement.remove();
-            }
-        }
-    }
-
-    // İşlem sonucunu modal ile gösterme
-    function showOperationResult(isSuccess, title, message) {
-        const modal = new bootstrap.Modal(document.getElementById('operationResultModal'));
-        const iconElement = document.getElementById('operation-result-icon');
-        const titleElement = document.getElementById('operation-result-title');
-        const messageElement = document.getElementById('operation-result-message');
-
-        // İçeriği güncelle
-        if (isSuccess) {
-            iconElement.innerHTML = '<i class="fas fa-check-circle text-success fa-5x"></i>';
-            titleElement.className = 'mb-3 text-success';
-        } else {
-            iconElement.innerHTML = '<i class="fas fa-exclamation-circle text-danger fa-5x"></i>';
-            titleElement.className = 'mb-3 text-danger';
-        }
-
-        titleElement.textContent = title;
-        messageElement.textContent = message;
-
-        // Modalı göster
-        modal.show();
-    }
-
-    // Bildirim gösterme fonksiyonu
+    // Bildirim gösterme
     function showNotification(message, type = 'info', duration = 3000) {
         // Bildirim container'ı oluştur veya mevcut olanı al
         let container = document.querySelector('.notification-container');
@@ -642,7 +545,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const closeButton = notification.querySelector('.notification-close');
         closeButton.addEventListener('click', () => {
             notification.classList.add('fade-out');
-
             setTimeout(() => {
                 notification.remove();
             }, 300);
@@ -651,7 +553,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Belirli süre sonra otomatik kapat
         setTimeout(() => {
             notification.classList.add('fade-out');
-
             setTimeout(() => {
                 notification.remove();
             }, 300);
@@ -665,149 +566,8 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
 
             const region = this.getAttribute('data-region');
-            const operation = this.getAttribute('data-op');
-
-            // Form değerlerini güncelle
-            regionSelect.value = region;
-
-            document.querySelectorAll('input[name="operation_type"]').forEach(radio => {
-                if (radio.value === operation) {
-                    radio.checked = true;
-                }
-            });
-
-            // Terazi değerini al
-            updateGramFromScale();
-
-            // Form'a odaklan
-            gramInput.focus();
-        });
-    });
-
-    // Teraziyi sıfırlama butonu
-    const tareButton = document.querySelector('[title="Teraziyi Sıfırla"]');
-    if (tareButton) {
-        tareButton.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            // Buton durumunu güncelle
-            this.classList.add('disabled');
-            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
-
-            // AJAX ile sıfırlama isteği gönder
-            fetch('/api/tare', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    showNotification(data.message, 'success');
-                } else {
-                    showNotification('Terazi sıfırlandı', 'success');
-                }
-
-                // Butonu eski haline getir
-                tareButton.classList.remove('disabled');
-                tareButton.innerHTML = '<i class="fas fa-balance-scale"></i>';
-            })
-            .catch(error => {
-                console.error('Terazi sıfırlama hatası:', error);
-                showNotification('Terazi sıfırlanamadı', 'danger');
-
-                // Butonu eski haline getir
-                tareButton.classList.remove('disabled');
-                tareButton.innerHTML = '<i class="fas fa-balance-scale"></i>';
-            });
-        });
-    }
-
-    // Mobil optimizasyonları
-    function optimizeForMobile() {
-        if (window.innerWidth <= 768) {
-            // Form alanlarını daha büyük yap
-            document.querySelectorAll('.form-control, .form-select').forEach(input => {
-                input.classList.add('form-control-lg');
-            });
-
-            document.querySelectorAll('.input-group-text').forEach(span => {
-                span.classList.add('input-group-text-lg');
-            });
-
-            // Operation ve region seçimini kolaylaştır
-            document.querySelectorAll('.operation-type-btns .btn').forEach(btn => {
-                btn.classList.add('py-3');
-            });
-        } else {
-            document.querySelectorAll('.form-control, .form-select').forEach(input => {
-                input.classList.remove('form-control-lg');
-            });
-
-            document.querySelectorAll('.input-group-text').forEach(span => {
-                span.classList.remove('input-group-text-lg');
-            });
-
-            document.querySelectorAll('.operation-type-btns .btn').forEach(btn => {
-                btn.classList.remove('py-3');
-            });
-        }
-    }
-
-    optimizeForMobile();
-    window.addEventListener('resize', optimizeForMobile);
-
-    // Custom CSS ekleme (yükleme göstergesi için)
-    const style = document.createElement('style');
-    style.textContent = `
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(255, 255, 255, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-
-        .quick-op-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Yükleme göstergesinin altında terazi güncellemelerinin görünmesi için */
-        #weight-display.weight-updated {
-            z-index: 10000;
-            position: relative;
-        }
-    `;
-
-    document.head.appendChild(style);
-});
-
-    // operations.html içindeki script bölümüne eklenecek kodlar
-document.addEventListener('DOMContentLoaded', function() {
-    // İşlem formu
-    const operationForm = document.getElementById('operationForm');
-    const regionSelect = document.getElementById('region');
-
-    // Hızlı işlem için kasa kontrolü ekleyelim
-    const quickOpLinks = document.querySelectorAll('.quick-op');
-    quickOpLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            const region = this.getAttribute('data-region');
             // Eğer hedef bölge kasa ise işlemi engelle
-            if (region === 'safe') {
+            if (region === 'safe' || region === 'kasa') {
                 showNotification('Kasa bölgesine manuel işlem yapılamaz!', 'warning');
                 return;
             }
@@ -830,35 +590,6 @@ document.addEventListener('DOMContentLoaded', function() {
             gramInput.focus();
         });
     });
-
-    // Form gönderim kontrolü
-    if (operationForm) {
-        operationForm.addEventListener('submit', function(e) {
-            // Seçilen bölgeyi kontrol et
-            const selectedRegion = regionSelect.value;
-            const regionOption = regionSelect.querySelector(`option[value="${selectedRegion}"]`);
-
-            // Kasa bölgesi seçilmişse engelle
-            if (regionOption && regionOption.getAttribute('data-is-safe') === 'true') {
-                e.preventDefault();
-                showNotification('Kasa bölgesine manuel işlem yapılamaz!', 'warning');
-                return false;
-            }
-
-            // Form doğrulaması
-            if (!operationForm.checkValidity()) {
-                e.preventDefault();
-                operationForm.classList.add('was-validated');
-
-                // İlk hatalı alana odaklan
-                const firstInvalid = operationForm.querySelector(':invalid');
-                if (firstInvalid) {
-                    firstInvalid.focus();
-                }
-                return false;
-            }
-        });
-    }
 });
 </script>
 {% endblock %}

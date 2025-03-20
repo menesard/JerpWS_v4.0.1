@@ -6,17 +6,20 @@ def format_time(timestamp):
         timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
     return timestamp.strftime('%d-%m-%Y %H:%M:%S')
 
-def change_region_tr(name):
-    """Bölge adını Türkçeye çevir"""
+def change_region_tr(region_name):
+    """İngilizce bölge adını Türkçeye çevir"""
     region_map = {
-        'polish': 'cila',
-        'melting': 'eritme',
-        'saw': 'patlatma',
-        'acid': 'boru',
-        'safe': 'kasa',
-        'table': 'masa'
+        'safe': 'Kasa',
+        'table': 'Masa',
+        'polish': 'Cila',
+        'melting': 'Eritme',
+        'saw': 'Testere',
+        'acid': 'Asit',
+        'kasa': 'Kasa',
+        'masa': 'Masa',
+        'yer': 'Yer'
     }
-    return region_map.get(name, name)
+    return region_map.get(region_name, region_name.capitalize() if region_name else '-')
 
 def change_region_en(name):
     """Bölge adını İngilizceye çevir"""
@@ -30,13 +33,13 @@ def change_region_en(name):
     }
     return region_map.get(name, name)
 
-def change_operation_tr(name):
-    """İşlem adını Türkçeye çevir"""
-    if name.upper() == 'ADD':
-        return 'EKLEME'
-    elif name.upper() == 'SUBTRACT':
-        return 'ÇIKARMA'
-    return name
+def change_operation_tr(operation_type):
+    """İngilizce işlem türünü Türkçeye çevir"""
+    operation_map = {
+        'ADD': 'EKLEME',
+        'SUBTRACT': 'ÇIKARMA'
+    }
+    return operation_map.get(operation_type, operation_type)
 
 def get_transaction_type_tr(transaction_type):
     """İşlem türünü Türkçeye çevir"""

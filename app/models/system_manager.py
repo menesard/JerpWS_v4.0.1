@@ -11,46 +11,88 @@ class SystemManager:
     @staticmethod
     def get_region_id(region_name):
         """Bölge adından ID'yi al (sadece aktif bölgeler)"""
-        # Olası farklı yazım şekillerini kontrol et
-        region_mappings = {
-            'table': 'masa',
-            'safe': 'kasa',
-            'masa': 'masa',
-            'kasa': 'kasa'
-        }
+        print(f"DEBUG: get_region_id çağrıldı: {region_name}")
 
-        # Bölge adını eşleştir
-        mapped_region_name = region_mappings.get(region_name.lower(), region_name)
+        # Giriş verisi kontrolü
+        if not region_name:
+            print("DEBUG: Bölge adı boş!")
+            return None
 
-        region = Region.query.filter_by(name=mapped_region_name, is_active=True).first()
-        return region.id if region else None
+        # 'kasa' ve 'safe' bölgelerini standartlaştırma
+        if region_name.lower() in ['kasa', 'safe']:
+            # Hem 'kasa' hem de 'safe' adlarına bakalım
+            region = Region.query.filter(
+                Region.is_active == True,
+                db.or_(
+                    db.func.lower(Region.name) == 'kasa',
+                    db.func.lower(Region.name) == 'safe'
+                )
+            ).first()
+        elif region_name.lower() in ['masa', 'table']:
+            # Hem 'masa' hem de 'table' adlarına bakalım
+            region = Region.query.filter(
+                Region.is_active == True,
+                db.or_(
+                    db.func.lower(Region.name) == 'masa',
+                    db.func.lower(Region.name) == 'table'
+                )
+            ).first()
+        else:
+            # Normal bölge araması
+            region = Region.query.filter(
+                Region.is_active == True,
+                db.func.lower(Region.name) == region_name.lower()
+            ).first()
+
+        if region:
+            print(f"DEBUG: Bölge bulundu - {region.name} (ID: {region.id})")
+            return region.id
+        else:
+            print(f"DEBUG: Bölge bulunamadı - {region_name}")
+            return None
+
     @staticmethod
     def get_region_status(region_name, setting_name):
         """Belirli bir bölgedeki belirli bir ayarın stok durumunu hesapla"""
-        region = Region.query.filter_by(name=region_name, is_active=True).first()
-        setting = Setting.query.filter_by(name=setting_name).first()
+        print(f"DEBUG: get_region_status çağrıldı: {region_name}, {setting_name}")
 
-        if not region or not setting:
+        # Region ID'yi al
+        region_id = SystemManager.get_region_id(region_name)
+        if not region_id:
+            print(f"DEBUG: '{region_name}' bölgesi bulunamadı, 0 dönülüyor")
             return {setting_name: 0}
 
-        # Eklenen toplam
-        added = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
-            Operation.target_region_id == region.id,
-            Operation.setting_id == setting.id,
-            Operation.operation_type == OPERATION_ADD
-        ).scalar()
+        # Setting ID'yi al
+        setting = Setting.query.filter_by(name=setting_name).first()
+        if not setting:
+            print(f"DEBUG: '{setting_name}' ayarı bulunamadı, 0 dönülüyor")
+            return {setting_name: 0}
 
-        # Çıkarılan toplam
-        subtracted = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
-            Operation.source_region_id == region.id,
-            Operation.setting_id == setting.id,
-            Operation.operation_type == OPERATION_SUBTRACT
-        ).scalar()
+        try:
+            # Eklenen toplam
+            added = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
+                Operation.target_region_id == region_id,
+                Operation.setting_id == setting.id,
+                Operation.operation_type == OPERATION_ADD
+            ).scalar()
 
-        # Net stok miktarını hesapla
-        net_stock = float(added - subtracted)
+            # Çıkarılan toplam
+            subtracted = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
+                Operation.source_region_id == region_id,
+                Operation.setting_id == setting.id,
+                Operation.operation_type == OPERATION_SUBTRACT
+            ).scalar()
 
-        return {setting_name: net_stock}
+            # Net stok miktarını hesapla
+            net_stock = float(added - subtracted)
+            print(
+                f"DEBUG: {region_name} bölgesindeki {setting_name} ayarı stok: {net_stock}g (Eklenen: {added}g, Çıkarılan: {subtracted}g)")
+
+            return {setting_name: net_stock}
+        except Exception as e:
+            import traceback
+            print(f"DEBUG Stok hesaplama hatası: {traceback.format_exc()}")
+            return {setting_name: 0}
 
     @staticmethod
     def get_setting_id(setting_name):
@@ -98,40 +140,35 @@ class SystemManager:
 
     @staticmethod
     def add_item(region_name, setting_name, gram, user_id=None):
-        """Bölgeye altın ekle"""
+        """Bölgeye altın ekle (masa üzerinden)"""
+        print(f"DEBUG: add_item başladı: {region_name}, {setting_name}, {gram}")
         region_id = SystemManager.get_region_id(region_name)
         setting_id = SystemManager.get_setting_id(setting_name)
-        table_id = SystemManager.get_region_id('table')
-        safe_id = SystemManager.get_region_id('safe')
+        table_id = SystemManager.get_region_id('table')  # masa bölgesi ID'si
+        safe_id = SystemManager.get_region_id('safe')  # kasa bölgesi ID'si
 
-        if not region_id or not setting_id:
+        # Debug
+        print(f"DEBUG ID'ler: region_id={region_id}, setting_id={setting_id}, table_id={table_id}, safe_id={safe_id}")
+
+        # ID kontrol
+        if not region_id:
+            print(f"DEBUG: '{region_name}' bölgesi bulunamadı")
+            return False
+        if not setting_id:
+            print(f"DEBUG: '{setting_name}' ayarı bulunamadı")
+            return False
+        if not table_id:
+            print("DEBUG: 'table/masa' bölgesi bulunamadı")
+            return False
+        if not safe_id:
+            print("DEBUG: 'safe/kasa' bölgesi bulunamadı")
             return False
 
         try:
-            # Kasa ve masa dışındaki bölgeler için özel işlem
-            if region_name not in ['table', 'safe']:
-                # Masa'dan bölgeye transfer
-                table_subtract_op = Operation(
-                    operation_type=OPERATION_SUBTRACT,
-                    source_region_id=table_id,
-                    target_region_id=region_id,
-                    setting_id=setting_id,
-                    gram=float(gram),
-                    user_id=user_id
-                )
-                table_add_op = Operation(
-                    operation_type=OPERATION_ADD,
-                    target_region_id=region_id,
-                    setting_id=setting_id,
-                    gram=float(gram),
-                    user_id=user_id
-                )
-                db.session.add(table_subtract_op)
-                db.session.add(table_add_op)
-
-            # Masa'ya ekleme (kasa'dan transfer)
-            elif region_name == 'table':
-                safe_subtract_op = Operation(
+            if region_name == 'table' or region_name == 'masa':
+                # Kasadan masaya transfer
+                # 1. Kasadan çıkar
+                subtract_op = Operation(
                     operation_type=OPERATION_SUBTRACT,
                     source_region_id=safe_id,
                     target_region_id=table_id,
@@ -139,59 +176,92 @@ class SystemManager:
                     gram=float(gram),
                     user_id=user_id
                 )
-                table_add_op = Operation(
+                # 2. Masaya ekle
+                add_op = Operation(
                     operation_type=OPERATION_ADD,
+                    source_region_id=safe_id,
                     target_region_id=table_id,
                     setting_id=setting_id,
                     gram=float(gram),
                     user_id=user_id
                 )
-                db.session.add(safe_subtract_op)
-                db.session.add(table_add_op)
+                db.session.add(subtract_op)
+                db.session.add(add_op)
+                print(f"DEBUG: Kasadan masaya işlem eklendi: {gram}g {setting_name}")
+            else:
+                # Masadan diğer bölgeye transfer
+                # 1. Masadan çıkar
+                subtract_op = Operation(
+                    operation_type=OPERATION_SUBTRACT,
+                    source_region_id=table_id,
+                    target_region_id=region_id,
+                    setting_id=setting_id,
+                    gram=float(gram),
+                    user_id=user_id
+                )
+                # 2. Hedef bölgeye ekle
+                add_op = Operation(
+                    operation_type=OPERATION_ADD,
+                    source_region_id=table_id,
+                    target_region_id=region_id,
+                    setting_id=setting_id,
+                    gram=float(gram),
+                    user_id=user_id
+                )
+                db.session.add(subtract_op)
+                db.session.add(add_op)
+                print(f"DEBUG: Masadan {region_name} bölgesine işlem eklendi: {gram}g {setting_name}")
 
             db.session.commit()
+            print("DEBUG: İşlem başarıyla tamamlandı")
             return True
         except Exception as e:
             db.session.rollback()
-            print(f"Add item error: {str(e)}")
+            import traceback
+            print(f"DEBUG HATA: {traceback.format_exc()}")
+            print(f"DEBUG: İşlem hatası: {str(e)}")
             return False
 
     @staticmethod
     def remove_item(region_name, setting_name, gram, user_id=None):
-        """Bölgeden altın çıkar"""
+        """Bölgeden altın çıkar (masa üzerinden)"""
+        print(f"DEBUG: remove_item başladı: {region_name}, {setting_name}, {gram}")
         region_id = SystemManager.get_region_id(region_name)
         setting_id = SystemManager.get_setting_id(setting_name)
-        table_id = SystemManager.get_region_id('table')
-        safe_id = SystemManager.get_region_id('safe')
+        table_id = SystemManager.get_region_id('table')  # masa bölgesi ID'si
+        safe_id = SystemManager.get_region_id('safe')  # kasa bölgesi ID'si
 
-        if not region_id or not setting_id:
+        # Debug
+        print(f"DEBUG ID'ler: region_id={region_id}, setting_id={setting_id}, table_id={table_id}, safe_id={safe_id}")
+
+        # ID kontrol
+        if not region_id:
+            print(f"DEBUG: '{region_name}' bölgesi bulunamadı")
+            return False
+        if not setting_id:
+            print(f"DEBUG: '{setting_name}' ayarı bulunamadı")
+            return False
+        if not table_id:
+            print("DEBUG: 'table/masa' bölgesi bulunamadı")
+            return False
+        if not safe_id:
+            print("DEBUG: 'safe/kasa' bölgesi bulunamadı")
+            return False
+
+        # Bölgedeki mevcut stok kontrolü
+        region_status = SystemManager.get_region_status(region_name, setting_name)
+        current_stock = region_status.get(setting_name, 0)
+        print(f"DEBUG: '{region_name}' bölgesindeki mevcut stok: {current_stock}g")
+
+        if current_stock < float(gram):
+            print(f"DEBUG: Yetersiz stok! İstenilen: {gram}g, Mevcut: {current_stock}g")
             return False
 
         try:
-            # Kasa ve masa dışındaki bölgeler için özel işlem
-            if region_name not in ['table', 'safe']:
-                # Bölgeden masa'ya transfer
-                region_subtract_op = Operation(
-                    operation_type=OPERATION_SUBTRACT,
-                    source_region_id=region_id,
-                    target_region_id=table_id,
-                    setting_id=setting_id,
-                    gram=float(gram),
-                    user_id=user_id
-                )
-                table_add_op = Operation(
-                    operation_type=OPERATION_ADD,
-                    target_region_id=table_id,
-                    setting_id=setting_id,
-                    gram=float(gram),
-                    user_id=user_id
-                )
-                db.session.add(region_subtract_op)
-                db.session.add(table_add_op)
-
-            # Masa'dan çıkarma (kasa'ya transfer)
-            elif region_name == 'table':
-                table_subtract_op = Operation(
+            if region_name == 'table' or region_name == 'masa':
+                # Masadan kasaya transfer
+                # 1. Masadan çıkar
+                subtract_op = Operation(
                     operation_type=OPERATION_SUBTRACT,
                     source_region_id=table_id,
                     target_region_id=safe_id,
@@ -199,21 +269,50 @@ class SystemManager:
                     gram=float(gram),
                     user_id=user_id
                 )
-                safe_add_op = Operation(
+                # 2. Kasaya ekle
+                add_op = Operation(
                     operation_type=OPERATION_ADD,
+                    source_region_id=table_id,
                     target_region_id=safe_id,
                     setting_id=setting_id,
                     gram=float(gram),
                     user_id=user_id
                 )
-                db.session.add(table_subtract_op)
-                db.session.add(safe_add_op)
+                db.session.add(subtract_op)
+                db.session.add(add_op)
+                print(f"DEBUG: Masadan kasaya işlem eklendi: {gram}g {setting_name}")
+            else:
+                # Diğer bölgeden masaya transfer
+                # 1. Bölgeden çıkar
+                subtract_op = Operation(
+                    operation_type=OPERATION_SUBTRACT,
+                    source_region_id=region_id,
+                    target_region_id=table_id,
+                    setting_id=setting_id,
+                    gram=float(gram),
+                    user_id=user_id
+                )
+                # 2. Masaya ekle
+                add_op = Operation(
+                    operation_type=OPERATION_ADD,
+                    source_region_id=region_id,
+                    target_region_id=table_id,
+                    setting_id=setting_id,
+                    gram=float(gram),
+                    user_id=user_id
+                )
+                db.session.add(subtract_op)
+                db.session.add(add_op)
+                print(f"DEBUG: {region_name} bölgesinden masaya işlem eklendi: {gram}g {setting_name}")
 
             db.session.commit()
+            print("DEBUG: İşlem başarıyla tamamlandı")
             return True
         except Exception as e:
             db.session.rollback()
-            print(f"Remove item error: {str(e)}")
+            import traceback
+            print(f"DEBUG HATA: {traceback.format_exc()}")
+            print(f"DEBUG: İşlem hatası: {str(e)}")
             return False
 
     @staticmethod
@@ -251,8 +350,10 @@ class SystemManager:
 
     @staticmethod
     def get_logs(limit=50):
-        """Son işlemleri döndür (kullanıcı bilgisi eklendi)"""
-        operations = Operation.query.order_by(Operation.timestamp.desc()).limit(limit).all()
+        """Son işlemleri döndür (daha okunabilir formatta)"""
+        # Sadece ekleme işlemlerini al (her transfer için bir kayıt)
+        operations = Operation.query.filter_by(operation_type=OPERATION_ADD).order_by(Operation.timestamp.desc()).limit(
+            limit).all()
         logs = []
 
         for op in operations:
@@ -266,14 +367,21 @@ class SystemManager:
                 if user:
                     username = user.username
 
+            # Daha açıklayıcı bir işlem açıklaması
+            operation_description = "EKLEME"
+            if source_region and target_region:
+                operation_description = f"TRANSFER ({source_region} → {target_region})"
+            elif not source_region and target_region:
+                operation_description = f"EKLEME ({target_region})"
+
             logs.append({
                 "time": op.timestamp.strftime('%d-%m-%Y %H:%M:%S'),
-                "operation_type": op.operation_type,
+                "operation_type": operation_description,  # Değiştirilmiş işlem açıklaması
                 "source_region": source_region,
                 "target_region": target_region,
                 "setting": op.setting.name,
                 "gram": f"{op.gram:.2f}",
-                "username": username  # Kullanıcı bilgisi eklendi
+                "username": username
             })
 
         return logs

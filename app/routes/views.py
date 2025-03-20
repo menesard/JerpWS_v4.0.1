@@ -148,6 +148,9 @@ def operations():
         region = request.form.get('region')
         gram = request.form.get('gram', type=float)
 
+        # Debug bilgisi
+        print(f"DEBUG: İşlem - Tip: {operation_type}, Bölge: {region}, Gram: {gram}, Ayar: {selected_setting}")
+
         # Kasa bölgesine manuel işlem yapılmasını engelle
         if region in ['safe', 'kasa']:
             flash('Kasa bölgesine manuel işlem yapılamaz!', 'danger')
@@ -158,9 +161,15 @@ def operations():
         else:
             try:
                 if operation_type == 'add':
+                    # Debug bilgisi
+                    print(f"DEBUG: add_item çağrılıyor: {region}, {selected_setting}, {gram}")
                     result = SystemManager.add_item(region, selected_setting, gram, current_user.id)
+                    print(f"DEBUG: add_item sonucu: {result}")
                 elif operation_type == 'subtract':
+                    # Debug bilgisi
+                    print(f"DEBUG: remove_item çağrılıyor: {region}, {selected_setting}, {gram}")
                     result = SystemManager.remove_item(region, selected_setting, gram, current_user.id)
+                    print(f"DEBUG: remove_item sonucu: {result}")
 
                 if result:
                     flash('İşlem başarıyla tamamlandı!', 'success')
@@ -168,6 +177,10 @@ def operations():
                     flash('İşlem gerçekleştirilemedi!', 'danger')
 
             except Exception as e:
+                # Tüm hata bilgisini göster
+                import traceback
+                error_details = traceback.format_exc()
+                print(f"DEBUG HATA: {error_details}")
                 flash(f'Hata oluştu: {str(e)}', 'danger')
 
         return redirect(url_for('main.operations'))
