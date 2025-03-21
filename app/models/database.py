@@ -90,12 +90,13 @@ class Customer(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # İlişkiler
-    transactions = db.relationship('CustomerTransaction',
-                                   backref=db.backref('customer_ref', uselist=False),
-                                   lazy='dynamic')
+    customer_transactions = db.relationship('CustomerTransaction',
+                                            back_populates='customer',
+                                            lazy='dynamic',
+                                            cascade='all, delete-orphan')
+
     def __repr__(self):
         return f"<Customer {self.name}>"
-
 
 # İşlem türleri için sabitler
 TRANSACTION_PRODUCT_IN = 'PRODUCT_IN'
@@ -114,41 +115,42 @@ class CustomerTransaction(db.Model):
     product_description = db.Column(db.String(200))
     setting_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=False)
     gram = db.Column(db.Float, nullable=False)
-    unit_price = db.Column(db.Float)  # Gram başına fiyat
-    labor_cost = db.Column(db.Float, default=0)  # İşçilik bedeli (TL)
-    total_amount = db.Column(db.Float)  # Toplam tutar
-    purity_per_thousand = db.Column(db.Integer, default=916)  # Milyem (ayara göre otomatik belirlenecek)
-    pure_gold_weight = db.Column(db.Float)  # Has altın değeri (gram)
-    labor_percentage = db.Column(db.Float, default=0)  # İşçilik yüzdesi (%)
-    labor_pure_gold = db.Column(db.Float, default=0)  # İşçilik has altın karşılığı
+    unit_price = db.Column(db.Float)
+    labor_cost = db.Column(db.Float, default=0)
+    total_amount = db.Column(db.Float)
+    purity_per_thousand = db.Column(db.Integer, default=916)
+    pure_gold_weight = db.Column(db.Float)
+    labor_percentage = db.Column(db.Float, default=0)
+    labor_pure_gold = db.Column(db.Float, default=0)
     notes = db.Column(db.Text)
     used_in_transfer = db.Column(db.Boolean, default=False, nullable=False)
     transfer_id = db.Column(db.Integer, db.ForeignKey('transfers.id'), nullable=True)
 
+    # İlişkiler
+    customer = db.relationship('Customer',
+                               back_populates='customer_transactions',
+                               foreign_keys=[customer_id])
 
-
-    # Düzenleme ile ilgili yeni alanlar
-    customer = db.relationship('Customer')
     setting = db.relationship('Setting')
     transfer = db.relationship('Transfer', backref='transactions')
+
+    # Düzenleme ile ilgili yeni alanlar
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     created_by = db.relationship('User', foreign_keys=[created_by_user_id])
-    is_edited = db.Column(db.Boolean, default=False)  # Düzenlenip düzenlenmediği
-    edited_date = db.Column(db.DateTime)  # Düzenlenme tarihi
-    edited_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))  # Düzenleyen kullanıcı
-    original_transaction_id = db.Column(db.Integer, db.ForeignKey('customer_transactions.id'))  # Orijinal işlem ID'si
 
-    # İlişkiler
-    setting = db.relationship('Setting')
+    is_edited = db.Column(db.Boolean, default=False)
+    edited_date = db.Column(db.DateTime)
+    edited_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     edited_by = db.relationship('User', foreign_keys=[edited_by_user_id])
-    original_transaction = db.relationship('CustomerTransaction', remote_side=[id],
+
+    original_transaction_id = db.Column(db.Integer, db.ForeignKey('customer_transactions.id'))
+    original_transaction = db.relationship('CustomerTransaction',
+                                           remote_side=[id],
                                            backref=db.backref('edited_versions', lazy='dynamic'),
                                            foreign_keys=[original_transaction_id])
 
-
     def __repr__(self):
         return f"<CustomerTransaction {self.transaction_type} {self.gram}g>"
-
 
 def init_db():
     """Veritabanını başlangıç verileriyle doldur"""
