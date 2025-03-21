@@ -77,8 +77,8 @@ class User(db.Model, UserMixin):
             return True
         if role == 'staff' and (self.role == 'manager' or self.role == 'staff'):
             return True
+        # Staff should only have access to operations
         return False
-
 class Customer(db.Model):
     __tablename__ = 'customers'
 

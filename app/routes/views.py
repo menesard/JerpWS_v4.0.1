@@ -22,6 +22,8 @@ def load_user(user_id):
 @main_bp.route('/')
 def index():
     """Ana sayfa"""
+    if current_user.is_authenticated and current_user.role == 'staff':
+        return redirect(url_for('main.operations'))
     return redirect(url_for('main.dashboard'))
 
 
@@ -32,6 +34,9 @@ from flask_jwt_extended import create_access_token
 def login():
     """Giriş sayfası"""
     if current_user.is_authenticated:
+        # Redirect staff users directly to operations instead of dashboard
+        if current_user.role == 'staff':
+            return redirect(url_for('main.operations'))
         return redirect(url_for('main.dashboard'))
 
     if request.method == 'POST':
@@ -44,7 +49,7 @@ def login():
 
             # JWT token oluştur ve yanıta ekle
             access_token = create_access_token(identity=username)
-            response = make_response(redirect(url_for('main.dashboard')))
+            response = make_response(redirect(url_for('main.operations') if user.role == 'staff' else url_for('main.dashboard')))
             response.set_cookie('jwt_token', access_token, httponly=False)
 
             return response
@@ -80,6 +85,11 @@ def select_setting():
 @login_required
 def dashboard():
     """Kontrol paneli sayfası"""
+    # Prevent staff users from accessing dashboard
+    if current_user.role == 'staff':
+        flash('Bu sayfaya erişim yetkiniz yok!', 'danger')
+        return redirect(url_for('main.operations'))
+
     # Seçili ayar kontrol
     if 'selected_setting' not in session:
         return redirect(url_for('main.select_setting'))
@@ -156,6 +166,11 @@ def operations():
             flash('Kasa bölgesine manuel işlem yapılamaz!', 'danger')
             return redirect(url_for('main.operations'))
 
+        # Staff users can't perform operations on 'yer' region
+        if current_user.role == 'staff' and region == 'yer':
+            flash('Bu bölgeyi kullanma yetkiniz yok!', 'danger')
+            return redirect(url_for('main.operations'))
+
         if not gram:
             flash('Geçerli bir gram değeri giriniz!', 'danger')
         else:
@@ -188,10 +203,16 @@ def operations():
     # Önce tüm aktif bölgeleri al
     all_regions = Region.query.filter_by(is_active=True).all()
 
-    # Sonra kasa bölgesini filtrele (hem 'safe' hem de 'kasa' olabilir)
-    regions = [{'name': region.name, 'name_tr': change_region_tr(region.name)}
-               for region in all_regions
-               if region.name not in ['safe', 'kasa']]
+    # Filter regions for staff users - Hide 'yer' for staff users
+    regions = []
+    for region in all_regions:
+        if region.name not in ['safe', 'kasa']:
+            if current_user.role == 'staff' and region.name == 'yer':
+                continue  # Skip 'yer' for staff users
+            regions.append({
+                'name': region.name,
+                'name_tr': change_region_tr(region.name)
+            })
 
     return render_template(
         'operations.html',
@@ -312,6 +333,9 @@ def tare_scale():
 @login_required
 def customers():
     """Müşteriler sayfası"""
+    if current_user.role == 'staff':
+        flash('Bu sayfaya erişim yetkiniz yok!', 'danger')
+        return redirect(url_for('main.operations'))
     search = request.args.get('search', '')
     customers_list = SystemManager.get_customers(search)
 

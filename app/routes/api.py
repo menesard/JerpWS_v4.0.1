@@ -106,6 +106,10 @@ def add_item():
     if not current_user:
         return jsonify({"error": "Kullanıcı bulunamadı"}), 401
 
+    # Check staff permissions for table and yer regions
+    if current_user.role == 'staff' and (region in ['table', 'masa', 'yer']):
+        return jsonify({"error": "Bu bölgeyi kullanma yetkiniz yok"}), 403
+
     try:
         gram = float(gram)
         result = SystemManager.add_item(region, setting, gram, current_user.id)
@@ -143,6 +147,10 @@ def remove_item():
 
     if not current_user:
         return jsonify({"error": "Kullanıcı bulunamadı"}), 401
+
+    # Check staff permissions for table and yer regions
+    if current_user.role == 'staff' and (region in ['table', 'masa', 'yer']):
+        return jsonify({"error": "Bu bölgeyi kullanma yetkiniz yok"}), 403
 
     try:
         gram = float(gram)

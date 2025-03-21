@@ -142,11 +142,18 @@ class SystemManager:
     def add_item(region_name, setting_name, gram, user_id=None):
         """Bölgeye altın ekle (masa üzerinden)"""
         print(f"DEBUG: add_item başladı: {region_name}, {setting_name}, {gram}")
+
+        # Check user permissions
+        if user_id:
+            user = User.query.get(user_id)
+            if user and user.role == 'staff' and region_name in ['masa', 'table', 'yer']:
+                print(f"DEBUG: User with staff role has no permission for {region_name}")
+                return False
+
         region_id = SystemManager.get_region_id(region_name)
         setting_id = SystemManager.get_setting_id(setting_name)
         table_id = SystemManager.get_region_id('table')  # masa bölgesi ID'si
         safe_id = SystemManager.get_region_id('safe')  # kasa bölgesi ID'si
-
         # Debug
         print(f"DEBUG ID'ler: region_id={region_id}, setting_id={setting_id}, table_id={table_id}, safe_id={safe_id}")
 
@@ -226,6 +233,14 @@ class SystemManager:
     def remove_item(region_name, setting_name, gram, user_id=None):
         """Bölgeden altın çıkar (masa üzerinden)"""
         print(f"DEBUG: remove_item başladı: {region_name}, {setting_name}, {gram}")
+
+        # Check user permissions
+        if user_id:
+            user = User.query.get(user_id)
+            if user and user.role == 'staff' and region_name in ['masa', 'table', 'yer']:
+                print(f"DEBUG: User with staff role has no permission for {region_name}")
+                return False
+
         region_id = SystemManager.get_region_id(region_name)
         setting_id = SystemManager.get_setting_id(setting_name)
         table_id = SystemManager.get_region_id('table')  # masa bölgesi ID'si
