@@ -2,8 +2,6 @@ from datetime import datetime
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
-from app import db
-from flask_login import current_user
 from app.models.database import User, Fire, Region
 from app.models.system_manager import SystemManager
 from app.hardware.scale import ScaleManager

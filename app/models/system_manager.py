@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app import db
 from app.models.database import Region, Setting, Operation, Customer, CustomerTransaction, User, Expense, Transfer, \
@@ -682,7 +682,7 @@ class SystemManager:
         new_transaction = CustomerTransaction(
             customer_id=original_transaction.customer_id,
             transaction_type=kwargs.get('transaction_type', original_transaction.transaction_type),
-            transaction_date=datetime.utcnow(),
+            transaction_date=datetime.now(UTC),
             product_description=kwargs.get('product_description', original_transaction.product_description),
             setting_id=kwargs.get('setting_id', original_transaction.setting_id),
             gram=kwargs.get('gram', original_transaction.gram),
@@ -695,7 +695,7 @@ class SystemManager:
             labor_pure_gold=kwargs.get('labor_pure_gold', original_transaction.labor_pure_gold),
             notes=kwargs.get('notes', original_transaction.notes),
             is_edited=True,
-            edited_date=datetime.utcnow(),
+            edited_date=datetime.now(UTC),
             edited_by_user_id=user_id,
             original_transaction_id=original_transaction.id
         )
@@ -1236,30 +1236,31 @@ class SystemManager:
 
         return query.order_by(DailyVault.date.desc()).all()
 
-    @staticmethod
-    def get_region_status(region_name, setting_name):
-        """Belirli bir bölgedeki belirli bir ayarın stok durumunu hesapla"""
-        region = Region.query.filter_by(name=region_name).first()
-        setting = Setting.query.filter_by(name=setting_name).first()
+    # @staticmethod
+    # def get_region_status(region_name, setting_name):
+    #     """Belirli bir bölgedeki belirli bir ayarın stok durumunu hesapla"""
+    #     region = Region.query.filter_by(name=region_name).first()
+    #     setting = Setting.query.filter_by(name=setting_name).first()
+    #
+    #     if not region or not setting:
+    #         return {setting_name: 0}
+    #
+    #     # Eklenen toplam
+    #     added = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
+    #         Operation.target_region_id == region.id,
+    #         Operation.setting_id == setting.id,
+    #         Operation.operation_type == OPERATION_ADD
+    #     ).scalar()
+    #
+    #     # Çıkarılan toplam
+    #     subtracted = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
+    #         Operation.source_region_id == region.id,
+    #         Operation.setting_id == setting.id,
+    #         Operation.operation_type == OPERATION_SUBTRACT
+    #     ).scalar()
+    #
+    #     # Net stok miktarını hesapla
+    #     net_stock = float(added - subtracted)
+    #
+    #     return {setting_name: net_stock}
 
-        if not region or not setting:
-            return {setting_name: 0}
-
-        # Eklenen toplam
-        added = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
-            Operation.target_region_id == region.id,
-            Operation.setting_id == setting.id,
-            Operation.operation_type == OPERATION_ADD
-        ).scalar()
-
-        # Çıkarılan toplam
-        subtracted = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
-            Operation.source_region_id == region.id,
-            Operation.setting_id == setting.id,
-            Operation.operation_type == OPERATION_SUBTRACT
-        ).scalar()
-
-        # Net stok miktarını hesapla
-        net_stock = float(added - subtracted)
-
-        return {setting_name: net_stock}

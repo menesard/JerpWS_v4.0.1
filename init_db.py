@@ -11,14 +11,14 @@ with app.app_context():
     os.makedirs(db_path, exist_ok=True)
 
     # Dizin izinlerini ayarla
-    os.chmod(db_path, 0o777)
+    # os.chmod(db_path, 0o777)
 
     # Veritabanı dosyasını oluştur ve izinlerini ayarla
     db_file = os.path.join(db_path, 'jewelry.db')
 
     # Eğer dosya zaten varsa izinlerini değiştir
-    if os.path.exists(db_file):
-        os.chmod(db_file, 0o666)
+    # if os.path.exists(db_file):
+    #    os.chmod(db_file, 0o666)
 
     # Veritabanı tablolarını oluştur
     db.create_all()

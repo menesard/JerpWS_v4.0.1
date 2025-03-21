@@ -10,14 +10,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const mobileMenuMore = document.getElementById('mobileMenuMore');
     if (mobileMenuMore) {
         const mobileMenuModal = new bootstrap.Modal(document.getElementById('mobileMenuModal'));
-        mobileMenuMore.addEventListener('click', function(e) {
+        mobileMenuMore.addEventListener('click', function (e) {
             e.preventDefault();
             mobileMenuModal.show();
         });
     }
 
     // Mobil cihazlarda tablo veri etiketlerini otomatik oluştur
-    const prepareMobileTables = function() {
+    const prepareMobileTables = function () {
         document.querySelectorAll('.table-mobile').forEach(table => {
             const headerCells = table.querySelectorAll('thead th');
             const headerTexts = [];
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let touchStartX = 0;
     let touchEndX = 0;
 
-    const handleSwipe = function() {
+    const handleSwipe = function () {
         if (touchEndX < touchStartX - 100) {
             // Sağdan sola kaydırma (ileri)
             const activeTab = document.querySelector('.mobile-nav-item.active');
@@ -63,17 +63,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    document.addEventListener('touchstart', function(e) {
+    document.addEventListener('touchstart', function (e) {
         touchStartX = e.changedTouches[0].screenX;
     });
 
-    document.addEventListener('touchend', function(e) {
+    document.addEventListener('touchend', function (e) {
         touchEndX = e.changedTouches[0].screenX;
         handleSwipe();
     });
 
     // Mobil cihazlar için tablo adaptasyonu
-    const adaptTables = function() {
+    const adaptTables = function () {
         const tables = document.querySelectorAll('table');
         if (window.innerWidth <= 768) {
             tables.forEach(table => {
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', adaptTables);
 
     // Mobil için hızlı işlem butonları
-    const createQuickActions = function() {
+    const createQuickActions = function () {
         // Mevcut sayfaya göre hızlı işlem butonları ekle
         const currentPath = window.location.pathname;
 
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
     createQuickActions();
 
     // Mobil cihazlarda tablo içeriğini optimize et
-    const optimizeTableContent = function() {
+    const optimizeTableContent = function () {
         if (window.innerWidth <= 576) {
             document.querySelectorAll('table td').forEach(cell => {
                 // Uzun içerikleri kısalt
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     cell.textContent = cell.textContent.substring(0, 20) + '...';
 
                     // Tıklandığında tam içeriği göster
-                    cell.addEventListener('click', function() {
+                    cell.addEventListener('click', function () {
                         const fullContent = this.getAttribute('data-full-content');
                         const isExpanded = this.classList.contains('expanded');
 
@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
     optimizeTableContent();
 
     // Form elemanlarını mobil için optimize et
-    const optimizeFormElements = function() {
+    const optimizeFormElements = function () {
         // Input alanlarını daha dokunmatik dostu yap
         document.querySelectorAll('input, select, textarea').forEach(input => {
             input.classList.add('mobile-friendly');
@@ -190,22 +190,22 @@ document.addEventListener('DOMContentLoaded', function() {
             decreaseBtn.type = 'button';
             decreaseBtn.className = 'btn btn-outline-secondary btn-sm';
             decreaseBtn.innerHTML = '<i class="fas fa-minus"></i>';
-            decreaseBtn.addEventListener('click', function() {
+            decreaseBtn.addEventListener('click', function () {
                 const step = parseFloat(input.getAttribute('step') || 1);
                 input.value = (parseFloat(input.value) - step) || 0;
                 // Değişikliği tetikle
-                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('input', {bubbles: true}));
             });
 
             const increaseBtn = document.createElement('button');
             increaseBtn.type = 'button';
             increaseBtn.className = 'btn btn-outline-secondary btn-sm';
             increaseBtn.innerHTML = '<i class="fas fa-plus"></i>';
-            increaseBtn.addEventListener('click', function() {
+            increaseBtn.addEventListener('click', function () {
                 const step = parseFloat(input.getAttribute('step') || 1);
                 input.value = (parseFloat(input.value) + step) || step;
                 // Değişikliği tetikle
-                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('input', {bubbles: true}));
             });
 
             // Sayfa yüklendiğinde elemanları yerleştirme
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', optimizeFormElements);
 
     // Mobil uyumlu bir loading göstergesi ekle
-    const createLoadingIndicator = function() {
+    const createLoadingIndicator = function () {
         const loader = document.createElement('div');
         loader.className = 'mobile-loader';
         loader.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Yükleniyor...</span></div>';
@@ -236,18 +236,19 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.appendChild(loader);
 
         // Sayfa yüklendiğinde gizle
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
             loader.style.display = 'none';
         });
 
         // Ajax istekleri sırasında göster
-        document.addEventListener('ajaxStart', function() {
+        document.addEventListener('ajaxStart', function () {
             loader.style.display = 'flex';
         });
 
-        document.addEventListener('ajaxComplete', function() {
+        document.addEventListener('ajaxComplete', function () {
             loader.style.display = 'none';
         });
     };
 
     createLoadingIndicator();
+});
