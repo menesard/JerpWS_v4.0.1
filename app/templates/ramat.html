@@ -26,53 +26,68 @@
     <div class="col-lg-8 mb-4">
         <div class="card shadow">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Bölge Has Değerleri (Kasa ve Masa Hariç)</h5>
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Bölge Has Değerleri</h5>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Bölge</th>
-                                <th>Ayar</th>
-                                <th>Gram</th>
-                                <th>Milyem</th>
-                                <th>Has Değer</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for region in region_data %}
-                            <tr class="table-primary">
-                                <td colspan="4" class="fw-bold">{{ region.name|capitalize }}</td>
-                                <td class="fw-bold">{{ region.total_pure_gold|round(4) }} g</td>
-                            </tr>
-                                {% for setting in region.settings %}
+                <form method="post" id="ramatForm">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead class="table-light">
                                 <tr>
-                                    <td></td>
-                                    <td>{{ setting.name }}</td>
-                                    <td>{{ setting.gram|round(2) }} g</td>
-                                    <td>{{ setting.purity }} ‰</td>
-                                    <td>{{ setting.pure_gold|round(4) }} g</td>
+                                    <th style="width: 50px;">Seç</th>
+                                    <th>Bölge</th>
+                                    <th>Ayar</th>
+                                    <th>Gram</th>
+                                    <th>Milyem</th>
+                                    <th>Has Değer</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for region in region_data %}
+                                <tr class="table-primary">
+                                    <td>
+                                        <div class="form-check">
+                                            <input class="form-check-input region-checkbox" type="checkbox" name="selected_regions"
+                                                   value="{{ region.id }}" id="region_{{ region.id }}"
+                                                   data-pure-gold="{{ region.total_pure_gold|round(4) }}">
+                                        </div>
+                                    </td>
+                                    <td colspan="4" class="fw-bold">{{ region.name|capitalize }}</td>
+                                    <td class="fw-bold">{{ region.total_pure_gold|round(4) }} g</td>
+                                </tr>
+                                    {% for setting in region.settings %}
+                                    <tr class="region-detail" data-region="{{ region.id }}">
+                                        <td></td>
+                                        <td></td>
+                                        <td>{{ setting.name }}</td>
+                                        <td>{{ setting.gram|round(2) }} g</td>
+                                        <td>{{ setting.purity }} ‰</td>
+                                        <td>{{ setting.pure_gold|round(4) }} g</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <div class="alert alert-info mb-0">
+                                            <i class="fas fa-info-circle me-2"></i>Bölgelerde ramat için altın bulunmuyor
+                                        </div>
+                                    </td>
                                 </tr>
                                 {% endfor %}
-                            {% else %}
-                            <tr>
-                                <td colspan="5" class="text-center py-4">
-                                    <div class="alert alert-info mb-0">
-                                        <i class="fas fa-info-circle me-2"></i>Bölgelerde ramat için altın bulunmuyor
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot class="table-dark">
-                            <tr>
-                                <td colspan="4" class="fw-bold text-end">Toplam Has Değer:</td>
-                                <td class="fw-bold">{{ total_pure_gold|round(4) }} g</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                            </tbody>
+                            <tfoot class="table-dark">
+                                <tr>
+                                    <td>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="selectAllRegions">
+                                        </div>
+                                    </td>
+                                    <td colspan="4" class="fw-bold text-end">Seçilen Toplam Has Değer:</td>
+                                    <td class="fw-bold" id="selectedTotalPureGold">0.0000 g</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
             </div>
         </div>
     </div>
@@ -84,17 +99,16 @@
                 <h5 class="mb-0"><i class="fas fa-fire-alt me-2"></i>Ramat Uygula</h5>
             </div>
             <div class="card-body">
-                {% if total_pure_gold > 0 %}
-                <form method="post" class="needs-validation" novalidate>
+                {% if region_data|length > 0 %}
                     <div class="mb-3">
                         <label for="actual_pure_gold" class="form-label">Gerçek Has Değer (g) <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-coins"></i></span>
-                            <input type="number" step="0.0001" min="0.0001" max="{{ total_pure_gold }}" class="form-control"
+                            <input type="number" step="0.0001" min="0.0001" class="form-control"
                                    id="actual_pure_gold" name="actual_pure_gold" required>
                             <span class="input-group-text">g</span>
                             <div class="invalid-feedback">
-                                Geçerli bir has değeri giriniz (maksimum: {{ total_pure_gold|round(4) }} g)
+                                Geçerli bir has değeri giriniz (maksimum: <span id="maxPureGold">0.0000</span> g)
                             </div>
                         </div>
                         <div class="form-text">
@@ -114,20 +128,25 @@
                         <div class="d-flex align-items-center">
                             <i class="fas fa-exclamation-triangle me-2"></i>
                             <div>
-                                <strong>Dikkat:</strong> Bu işlem kasa ve masa bölgeleri dışındaki tüm bölgelerdeki altınları kasaya aktaracak ve fire hesaplayacaktır.
+                                <strong>Dikkat:</strong> Bu işlem seçilen bölgelerdeki altınları kasaya aktaracak ve fire hesaplayacaktır.
                             </div>
                         </div>
                     </div>
 
+                    <div id="noSelectedRegionsAlert" class="alert alert-danger d-none">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Lütfen en az bir bölge seçiniz!
+                    </div>
+
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-warning" onclick="return confirm('Ramat işlemini uygulamak istediğinize emin misiniz?')">
+                        <button type="submit" class="btn btn-warning" id="ramatSubmitBtn">
                             <i class="fas fa-fire-alt me-1"></i>Ramat Uygula
                         </button>
                     </div>
 
-                    <div class="form-text text-center mt-3">
+                    <div class="form-text text-center mt-3" id="fireCalculation">
                         <i class="fas fa-info-circle me-1"></i>
-                        Fire: {{ total_pure_gold|round(4) }} g - Girilen Has Değer
+                        Fire: Seçilen Has - Girilen Has Değer
                     </div>
                 </form>
                 {% else %}
@@ -148,4 +167,172 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const regionCheckboxes = document.querySelectorAll('.region-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAllRegions');
+    const selectedTotalPureGold = document.getElementById('selectedTotalPureGold');
+    const actualPureGoldInput = document.getElementById('actual_pure_gold');
+    const maxPureGold = document.getElementById('maxPureGold');
+    const fireCalculation = document.getElementById('fireCalculation');
+    const ramatForm = document.getElementById('ramatForm');
+    const ramatSubmitBtn = document.getElementById('ramatSubmitBtn');
+    const noSelectedRegionsAlert = document.getElementById('noSelectedRegionsAlert');
+
+    // Seçilen bölgelere göre toplam has değeri güncelle
+    function updateTotalPureGold() {
+        let total = 0;
+        let selectedCount = 0;
+
+        regionCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                total += parseFloat(checkbox.getAttribute('data-pure-gold'));
+                selectedCount++;
+
+                // Seçilen bölgelerin detaylarını göster
+                const regionDetails = document.querySelectorAll(`.region-detail[data-region="${checkbox.value}"]`);
+                regionDetails.forEach(detail => {
+                    detail.classList.remove('d-none');
+                });
+            } else {
+                // Seçilmeyen bölgelerin detaylarını gizle
+                const regionDetails = document.querySelectorAll(`.region-detail[data-region="${checkbox.value}"]`);
+                regionDetails.forEach(detail => {
+                    detail.classList.add('d-none');
+                });
+            }
+        });
+
+        // Toplam değeri güncelle
+        selectedTotalPureGold.textContent = total.toFixed(4) + ' g';
+        maxPureGold.textContent = total.toFixed(4);
+
+        // Gerçek has değer input alanını güncelle
+        actualPureGoldInput.setAttribute('max', total);
+
+        // "Tümünü Seç" checkbox durumunu güncelle
+        if (regionCheckboxes.length > 0) {
+            selectAllCheckbox.checked = selectedCount === regionCheckboxes.length;
+            selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < regionCheckboxes.length;
+        }
+
+        // Bölge seçilmediyse uyarı göster/gizle
+        if (selectedCount === 0) {
+            noSelectedRegionsAlert.classList.remove('d-none');
+            ramatSubmitBtn.disabled = true;
+        } else {
+            noSelectedRegionsAlert.classList.add('d-none');
+            ramatSubmitBtn.disabled = false;
+        }
+
+        // Gerçek has değeri varsa fire hesaplamasını güncelle
+        updateFireCalculation();
+    }
+
+    // Fire hesaplamasını güncelle
+    function updateFireCalculation() {
+        const actualValue = parseFloat(actualPureGoldInput.value) || 0;
+        const totalValue = parseFloat(selectedTotalPureGold.textContent);
+
+        if (actualValue > 0) {
+            const fire = totalValue - actualValue;
+            fireCalculation.innerHTML = `
+                <i class="fas fa-info-circle me-1"></i>
+                Fire: ${fire.toFixed(4)} g (${totalValue.toFixed(4)} g - ${actualValue.toFixed(4)} g)
+            `;
+        } else {
+            fireCalculation.innerHTML = `
+                <i class="fas fa-info-circle me-1"></i>
+                Fire: Seçilen Has - Girilen Has Değer
+            `;
+        }
+    }
+
+    // Tümünü seç/kaldır
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            regionCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateTotalPureGold();
+        });
+    }
+
+    // Bölge seçimleri
+    regionCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateTotalPureGold);
+
+        // Bölge satırına tıklama ile checkbox'ı değiştirme
+        const parentRow = checkbox.closest('tr');
+        parentRow.addEventListener('click', function(e) {
+            // Checkbox'a direk tıklama değilse
+            if (e.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+                updateTotalPureGold();
+            }
+        });
+    });
+
+    // Gerçek has değeri değiştiğinde fire hesaplamasını güncelle
+    if (actualPureGoldInput) {
+        actualPureGoldInput.addEventListener('input', updateFireCalculation);
+    }
+
+    // Form gönderiminden önce kontrol
+    if (ramatForm) {
+        ramatForm.addEventListener('submit', function(e) {
+            // Bölge seçimi kontrolü
+            let anySelected = false;
+            regionCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    anySelected = true;
+                }
+            });
+
+            if (!anySelected) {
+                e.preventDefault();
+                noSelectedRegionsAlert.classList.remove('d-none');
+                return false;
+            }
+
+            // Has değer kontrolü
+            const actualValue = parseFloat(actualPureGoldInput.value) || 0;
+            const totalValue = parseFloat(selectedTotalPureGold.textContent);
+
+            if (actualValue <= 0) {
+                e.preventDefault();
+                actualPureGoldInput.classList.add('is-invalid');
+                return false;
+            }
+
+            if (actualValue > totalValue) {
+                e.preventDefault();
+                actualPureGoldInput.classList.add('is-invalid');
+                actualPureGoldInput.setCustomValidity(`Gerçek has değer, seçilen bölgelerin toplam has değerinden (${totalValue.toFixed(4)} g) büyük olamaz.`);
+                actualPureGoldInput.reportValidity();
+                return false;
+            }
+
+            // Onay isteme
+            if (!confirm('Ramat işlemini uygulamak istediğinize emin misiniz?')) {
+                e.preventDefault();
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    // Sayfa yüklendiğinde ilk durumu ayarla
+    updateTotalPureGold();
+
+    // Başlangıçta tüm bölge detaylarını gizle
+    document.querySelectorAll('.region-detail').forEach(detail => {
+        detail.classList.add('d-none');
+    });
+});
+</script>
 {% endblock %}

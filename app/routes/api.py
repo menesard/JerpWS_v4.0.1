@@ -481,7 +481,10 @@ def create_ramat():
         actual_pure_gold = float(data['actual_pure_gold'])
         notes = data.get('notes')
 
-        success, message = SystemManager.create_ramat(current_user.id, actual_pure_gold, notes)
+        # Seçilen bölgeleri al
+        selected_regions = data.get('selected_regions', [])
+
+        success, message = SystemManager.create_ramat(current_user.id, actual_pure_gold, selected_regions, notes)
 
         if success:
             return jsonify({"message": message}), 201

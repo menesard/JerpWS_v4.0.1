@@ -26,7 +26,7 @@
                 <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Yeni Masraf Ekle</h5>
             </div>
             <div class="card-body">
-                <form method="post" class="needs-validation" novalidate>
+                <form method="post" class="needs-validation" novalidate id="expenseForm">
                     <div class="mb-3">
                         <label for="description" class="form-label">Açıklama <span class="text-danger">*</span></label>
                         <div class="input-group">
@@ -48,15 +48,6 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="amount_gold" class="form-label">Altın Tutarı</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-coins"></i></span>
-                            <input type="number" step="0.01" min="0" class="form-control" id="amount_gold" name="amount_gold" value="0">
-                            <span class="input-group-text">g</span>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
                         <label for="gold_price" class="form-label">Altın Fiyatı</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-tag"></i></span>
@@ -65,9 +56,27 @@
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="amount_gold" class="form-label">Altın Tutarı <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-coins"></i></span>
+                            <input type="number" step="0.01" min="0" class="form-control" id="amount_gold" name="amount_gold" value="0" required>
+                            <span class="input-group-text">g</span>
+                            <button type="button" class="btn btn-outline-secondary" id="calculateGoldButton">
+                                <i class="fas fa-calculator"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">
+                            Altın tutarı gereklidir.
+                        </div>
+                        <div class="form-text" id="goldCalculationInfo">
+                            Hesaplama: TL Tutarı / Altın Fiyatı = Altın Tutarı
+                        </div>
+                    </div>
+
                     <div class="alert alert-info small">
                         <i class="fas fa-info-circle me-2"></i>
-                        En az bir tutar (TL veya altın) girmeniz gereklidir.
+                        TL tutarı ve altın fiyatı girildiğinde, altın tutarı otomatik hesaplanır.
                     </div>
 
                     <div class="d-grid">
@@ -177,4 +186,174 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form elemanları
+    const amountTlInput = document.getElementById('amount_tl');
+    const goldPriceInput = document.getElementById('gold_price');
+    const amountGoldInput = document.getElementById('amount_gold');
+    const calculateGoldButton = document.getElementById('calculateGoldButton');
+    const goldCalculationInfo = document.getElementById('goldCalculationInfo');
+    const expenseForm = document.getElementById('expenseForm');
+
+    // TL tutarı veya altın fiyatı değiştiğinde altın tutarını otomatik hesapla
+    function calculateGoldAmount() {
+        const amountTl = parseFloat(amountTlInput.value) || 0;
+        const goldPrice = parseFloat(goldPriceInput.value) || 0;
+
+        if (amountTl > 0 && goldPrice > 0) {
+            const goldAmount = amountTl / goldPrice;
+            amountGoldInput.value = goldAmount.toFixed(2);
+
+            // Hesaplama bilgisini güncelle
+            goldCalculationInfo.innerHTML = `
+                Hesaplama: ${amountTl.toFixed(2)} ₺ / ${goldPrice.toFixed(2)} ₺/g = ${goldAmount.toFixed(2)} g
+            `;
+            goldCalculationInfo.classList.add('text-success');
+        } else {
+            goldCalculationInfo.innerHTML = 'Hesaplama: TL Tutarı / Altın Fiyatı = Altın Tutarı';
+            goldCalculationInfo.classList.remove('text-success');
+        }
+    }
+
+    // Input değişikliklerini dinle
+    if (amountTlInput && goldPriceInput) {
+        amountTlInput.addEventListener('input', calculateGoldAmount);
+        goldPriceInput.addEventListener('input', calculateGoldAmount);
+    }
+
+    // Hesapla butonunu etkinleştir
+    if (calculateGoldButton) {
+        calculateGoldButton.addEventListener('click', calculateGoldAmount);
+    }
+
+    // Form gönderildiğinde validasyon
+    if (expenseForm) {
+        expenseForm.addEventListener('submit', function(event) {
+            if (!this.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                // İlk hatalı alana odaklan
+                const invalidField = this.querySelector(':invalid');
+                if (invalidField) {
+                    invalidField.focus();
+                }
+            }
+
+            // Altın tutarı kontrolü
+            const goldAmount = parseFloat(amountGoldInput.value) || 0;
+            if (goldAmount <= 0) {
+                event.preventDefault();
+                amountGoldInput.classList.add('is-invalid');
+                return false;
+            }
+
+            this.classList.add('was-validated');
+        });
+    }
+
+    // Tabloyu filtreleme
+    const searchInput = document.getElementById('table-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('#expenses-table tbody tr');
+
+            tableRows.forEach(row => {
+                if (row.cells.length > 1) { // Boş mesaj satırını kontrol et
+                    const rowText = row.textContent.toLowerCase();
+                    row.style.display = rowText.includes(searchTerm) ? '' : 'none';
+                }
+            });
+        });
+    }
+
+    // Excel'e aktarma
+    const exportBtn = document.getElementById('btn-export');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+            // Görünen satırları seç
+            const table = document.getElementById('expenses-table');
+            const rows = Array.from(table.querySelectorAll('tbody tr'))
+                .filter(row => row.style.display !== 'none' && row.cells.length > 1);
+
+            if (rows.length === 0) {
+                alert('Dışa aktarılacak veri bulunamadı!');
+                return;
+            }
+
+            // CSV içeriği oluştur
+            let csvContent = "Tarih,Açıklama,TL Tutarı,Altın Tutarı,Altın Fiyatı,Kullanıldı,İşlemi Yapan\n";
+
+            rows.forEach(row => {
+                const data = Array.from(row.cells).map(cell => {
+                    // Hücre içeriğini temizle ve tırnak içine al
+                    let content = cell.textContent.trim().replace(/[\n\r]+/g, ' ');
+                    return `"${content}"`;
+                });
+                csvContent += data.join(',') + '\n';
+            });
+
+            // CSV dosyasını indir
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `masraflar_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    }
+
+    // Yazdırma
+    const printBtn = document.getElementById('btn-print');
+    if (printBtn) {
+        printBtn.addEventListener('click', function() {
+            window.print();
+        });
+    }
+
+    // Mobil optimize
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            // Form elemanlarını büyüt
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.add('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.add('input-group-text-lg');
+            });
+
+            // Tabloyu mobil uyumlu hale getir
+            document.getElementById('expenses-table').classList.add('table-mobile');
+        } else {
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.remove('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.remove('input-group-text-lg');
+            });
+
+            document.getElementById('expenses-table').classList.remove('table-mobile');
+        }
+    }
+
+    // İlk yüklemede optimize et
+    optimizeForMobile();
+
+    // Pencere boyutu değiştiğinde optimize et
+    window.addEventListener('resize', optimizeForMobile);
+
+    // Sayfa yüklendiğinde hesaplamayı bir kez çalıştır
+    calculateGoldAmount();
+});
+</script>
 {% endblock %}

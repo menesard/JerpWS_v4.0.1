@@ -59,9 +59,21 @@
                     </div>
                 </div>
 
+                {% if previous_transfer %}
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <div>
+                            <strong>Önceki Devir:</strong> {{ previous_transfer.date.strftime('%d-%m-%Y') }}
+                            <span class="d-block mt-1">{{ previous_transfer.transfer_amount|round(4) }} g</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="alert alert-light text-center">
                     <p class="mb-0 small">
-                        <strong>Formül:</strong> (Müşterilere Verilenler + İşçilik) - (Müşterilerden Alınanlar + İşçilik) - Masraflar
+                        <strong>Formül:</strong> {% if previous_transfer %}Son Devir + {% endif %}(Müşterilere Verilenler + İşçilik) - (Müşterilerden Alınanlar + İşçilik) - Masraflar
                     </p>
                 </div>
             </div>
@@ -235,4 +247,71 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // İşlem arama fonksiyonu
+    const transactionSearch = document.getElementById('transaction-search');
+    if (transactionSearch) {
+        transactionSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#transactions-table tbody tr');
+
+            rows.forEach(row => {
+                if (row.cells.length > 1) { // Boş satır kontrolü
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                }
+            });
+        });
+    }
+
+    // Masraf arama fonksiyonu
+    const expenseSearch = document.getElementById('expense-search');
+    if (expenseSearch) {
+        expenseSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#expenses-table tbody tr');
+
+            rows.forEach(row => {
+                if (row.cells.length > 1) { // Boş satır kontrolü
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                }
+            });
+        });
+    }
+
+    // Mobil optimizasyon
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            // Tablolara mobil sınıfını ekle
+            document.querySelectorAll('table').forEach(table => {
+                table.classList.add('table-mobile');
+            });
+
+            // Arama alanlarını büyüt
+            document.querySelectorAll('.form-control').forEach(input => {
+                input.classList.add('form-control-lg');
+            });
+        } else {
+            // Mobil sınıfını kaldır
+            document.querySelectorAll('table').forEach(table => {
+                table.classList.remove('table-mobile');
+            });
+
+            // Form kontrol sınıflarını küçült
+            document.querySelectorAll('.form-control').forEach(input => {
+                input.classList.remove('form-control-lg');
+            });
+        }
+    }
+
+    // İlk yükleme ve pencere boyutu değişiminde optimize et
+    optimizeForMobile();
+    window.addEventListener('resize', optimizeForMobile);
+});
+</script>
 {% endblock %}

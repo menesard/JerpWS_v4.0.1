@@ -57,7 +57,12 @@
                                 <td>{{ transfer.customer_total|round(4) }} g</td>
                                 <td>{{ transfer.labor_total|round(4) }} g</td>
                                 <td>{{ transfer.expense_total|round(4) }} g</td>
-                                <td class="fw-bold">{{ transfer.transfer_amount|round(4) }} g</td>
+                                <td class="fw-bold">
+                                    {{ transfer.transfer_amount|round(4) }} g
+                                    {% if loop.first and transfers|length > 1 %}
+                                    <span class="badge bg-info ms-1" title="Son devir, yeni devirlerde kullanılacak">Son</span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ transfer.user.username }}</td>
                                 <td class="text-end">
                                     <a href="{{ url_for('main.transfer_detail', transfer_id=transfer.id) }}" class="btn btn-sm btn-info">
@@ -94,15 +99,127 @@
                 </p>
                 <div class="alert alert-light mt-3 mb-3">
                     <p class="mb-0 fw-bold text-center">
-                        Devir = (Müşterilere Verilenler + İşçilik) - (Müşterilerden Alınanlar + İşçilik) - Masraflar
+                        Devir = Son Devir + (Müşterilere Verilenler + İşçilik) - (Müşterilerden Alınanlar + İşçilik) - Masraflar
                     </p>
                 </div>
                 <p class="mb-0">
                     Devir işlemi yapıldığında, devire dahil edilen müşteri işlemleri ve masraflar işaretlenir ve tekrar kullanılamaz.
-                    Bu sayede her devir, yalnızca son devirden sonraki işlemleri kapsar.
+                    Her yeni devir, son yapılan devir miktarını da dikkate alarak hesaplanır.
                 </p>
             </div>
         </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tablo filtresi
+    const searchInput = document.getElementById('table-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const tableRows = document.querySelectorAll('#transfers-table tbody tr');
+
+            tableRows.forEach(row => {
+                if (row.cells.length > 1) { // Sonuç yok satırını atla
+                    const rowText = row.textContent.toLowerCase();
+                    row.style.display = rowText.includes(searchTerm) ? '' : 'none';
+                }
+            });
+        });
+    }
+
+    // Excel'e aktarma
+    const exportBtn = document.getElementById('btn-export');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+            // Görünen satırları seç
+            const table = document.getElementById('transfers-table');
+            const rows = Array.from(table.querySelectorAll('tbody tr'))
+                .filter(row => row.style.display !== 'none' && row.cells.length > 1);
+
+            if (rows.length === 0) {
+                alert('Dışa aktarılacak veri bulunamadı!');
+                return;
+            }
+
+            // CSV içeriği oluştur
+            let csvContent = "Tarih,Müşteri Toplamı,İşçilik Toplamı,Masraf Toplamı,Devir Miktarı,İşlemi Yapan\n";
+
+            rows.forEach(row => {
+                const data = [
+                    row.cells[0].textContent.trim(),
+                    row.cells[1].textContent.trim(),
+                    row.cells[2].textContent.trim(),
+                    row.cells[3].textContent.trim(),
+                    row.cells[4].textContent.trim().split('\n')[0], // Son sütunda badge var
+                    row.cells[5].textContent.trim()
+                ];
+
+                csvContent += data.map(cell => `"${cell}"`).join(',') + '\n';
+            });
+
+            // CSV dosyasını indir
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `devir_islemleri_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    }
+
+    // Yazdırma
+    const printBtn = document.getElementById('btn-print');
+    if (printBtn) {
+        printBtn.addEventListener('click', function() {
+            window.print();
+        });
+    }
+
+    // Mobil optimize
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            // Tabloyu mobil uyumlu hale getir
+            document.getElementById('transfers-table').classList.add('table-mobile');
+
+            // Arama kutusu ve butonları büyüt
+            document.querySelector('.form-control-sm').classList.add('form-control-lg');
+            document.querySelectorAll('.btn-sm').forEach(btn => {
+                btn.classList.remove('btn-sm');
+            });
+
+            // Satır tıklama ekle
+            const rows = document.querySelectorAll('#transfers-table tbody tr');
+            rows.forEach(row => {
+                if (row.cells.length > 1) { // Sonuç yok satırını atla
+                    row.classList.add('cursor-pointer');
+                    row.addEventListener('click', function(e) {
+                        // Eğer tıklanan buton veya form elemanı değilse
+                        if (!e.target.closest('button, a, input')) {
+                            const detailLink = this.querySelector('a.btn-info');
+                            if (detailLink) {
+                                window.location.href = detailLink.href;
+                            }
+                        }
+                    });
+                }
+            });
+        } else {
+            document.getElementById('transfers-table').classList.remove('table-mobile');
+            document.querySelector('.form-control-sm').classList.remove('form-control-lg');
+        }
+    }
+
+    // İlk yükleme ve pencere boyutu değişiminde optimize et
+    optimizeForMobile();
+    window.addEventListener('resize', optimizeForMobile);
+});
+</script>
 {% endblock %}

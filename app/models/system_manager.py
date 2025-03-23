@@ -890,20 +890,37 @@ class SystemManager:
         return True, "Bölge başarıyla geri yüklendi"
 
     @staticmethod
-    def create_ramat(user_id, actual_pure_gold, notes=None):
-        """Ramat işlemi oluştur ve fire hesapla - Bölge bazlı işlem"""
-        # Her bölge için ayrı olarak ramat işlemi yapılacak
+    def create_ramat(user_id, actual_pure_gold, selected_regions=None, notes=None):
+        """
+        Ramat işlemi oluştur ve fire hesapla
+
+        Args:
+            user_id: İşlemi yapan kullanıcı ID'si
+            actual_pure_gold: Gerçek has altın miktarı
+            selected_regions: Ramat işlemine dahil edilecek bölge ID'leri listesi, None ise tüm bölgeler
+            notes: İşlem notları
+        """
+        # Tüm bölgelerdeki altınları topla
         total_pure_gold = 0
         fire_details = []
 
         # Sadece aktif bölgeleri al
-        regions = Region.query.filter_by(is_active=True).all()
+        regions_query = Region.query.filter_by(is_active=True)
+
+        # Eğer belirli bölgeler seçildiyse, sadece onları filtreleyerek kullan
+        if selected_regions and len(selected_regions) > 0:
+            regions_query = regions_query.filter(Region.id.in_(selected_regions))
+
+        regions = regions_query.all()
+
+        # Hiç bölge seçilmediyse hata döndür
+        if not regions:
+            return False, "Ramat için bölge seçilmedi veya seçilen bölgeler bulunamadı"
 
         # Her bölge için ayar bazında detayları hesapla
         for region in regions:
-            # Kasa ve masa bölgelerini ramat hesabına katmıyoruz
-            if region.name in ['kasa', 'safe', 'masa', 'table']:
-                continue  
+            if region.name == 'kasa':
+                continue  # Kasa bölgesini ramat hesabına katmıyoruz
 
             for setting in Setting.query.all():
                 status = SystemManager.get_region_status(region.name, setting.name)
@@ -922,7 +939,7 @@ class SystemManager:
                     })
 
         if total_pure_gold <= 0:
-            return False, "Bölgelerde ramat için altın bulunmuyor"
+            return False, "Seçilen bölgelerde ramat için altın bulunmuyor"
 
         # Gerçek has değer beklenen değerden büyük olamaz
         if float(actual_pure_gold) > total_pure_gold:
@@ -954,10 +971,10 @@ class SystemManager:
             db.session.add(fire_detail)
 
         # Ramat sonrası bölgelerden altınları çıkar ve kasaya ekle
-        # Her bölgeyi temizle (kasa ve masa hariç)
+        # Her işleme dahil edilen bölgeyi temizle (kasa hariç)
         for region in regions:
-            if region.name in ['kasa', 'safe', 'masa', 'table']:
-                continue  # Kasa ve masa bölgelerini işleme dahil etmiyoruz
+            if region.name == 'kasa':
+                continue
 
             for setting in Setting.query.all():
                 status = SystemManager.get_region_status(region.name, setting.name)
@@ -1014,8 +1031,19 @@ class SystemManager:
     @staticmethod
     def calculate_transfer():
         """Devir hesapla - henüz devir işlemi oluşturmaz"""
-        # Müşteri işlemlerini al (devirde henüz kullanılmamış)
-        customer_transactions = CustomerTransaction.query.filter_by(used_in_transfer=False).all()
+        # Son deviri bul
+        last_transfer = Transfer.query.order_by(Transfer.date.desc()).first()
+
+        # Müşteri işlemlerini al (son devirden sonraki veya devirde henüz kullanılmamış)
+        customer_transactions_query = CustomerTransaction.query.filter_by(used_in_transfer=False)
+
+        # Eğer son devir varsa, ondan sonraki işlemleri al
+        if last_transfer:
+            customer_transactions_query = customer_transactions_query.filter(
+                CustomerTransaction.transaction_date > last_transfer.date
+            )
+
+        customer_transactions = customer_transactions_query.all()
 
         # Müşteri işlemlerini topla
         customer_total = 0
@@ -1032,14 +1060,30 @@ class SystemManager:
                 customer_total -= tx.pure_gold_weight
                 labor_total -= tx.labor_pure_gold
 
-        # Masrafları al (devirde henüz kullanılmamış)
-        expenses = Expense.query.filter_by(used_in_transfer=False).all()
+        # Masrafları al (son devirden sonraki veya devirde henüz kullanılmamış)
+        expenses_query = Expense.query.filter_by(used_in_transfer=False)
+
+        # Eğer son devir varsa, ondan sonraki masrafları al
+        if last_transfer:
+            expenses_query = expenses_query.filter(
+                Expense.date > last_transfer.date
+            )
+
+        expenses = expenses_query.all()
         expense_total = sum(expense.amount_gold for expense in expenses)
 
-        # Devir formülü: Devir = (Müşterilere verilenler + İşçilik) - (Müşterilerden alınanlar + İşçilik) - Masraf
-        transfer_amount = customer_total + labor_total - expense_total
+        # Son devir değeri
+        last_transfer_amount = 0
+        if last_transfer:
+            last_transfer_amount = last_transfer.transfer_amount
+
+        # Devir formülü güncellendi:
+        # Devir = Son Devir + (Müşterilere verilenler + İşçilik) - (Müşterilerden alınanlar + İşçilik) - Masraf
+        transfer_amount = last_transfer_amount + customer_total + labor_total - expense_total
 
         return {
+            'last_transfer': last_transfer,
+            'last_transfer_amount': last_transfer_amount,
             'customer_total': customer_total,
             'labor_total': labor_total,
             'expense_total': expense_total,
@@ -1079,7 +1123,14 @@ class SystemManager:
             expense.transfer_id = transfer.id
 
         db.session.commit()
-        return True, f"Devir işlemi başarıyla tamamlandı. Devir miktarı: {transfer_data['transfer_amount']:.4f} g"
+
+        # Son devir değeri mesajı ekle
+        last_transfer_msg = ""
+        if transfer_data['last_transfer']:
+            last_transfer_date = transfer_data['last_transfer'].date.strftime('%d-%m-%Y')
+            last_transfer_msg = f" (Son devir: {transfer_data['last_transfer_amount']:.4f} g, {last_transfer_date})"
+
+        return True, f"Devir işlemi başarıyla tamamlandı. Devir miktarı: {transfer_data['transfer_amount']:.4f} g{last_transfer_msg}"
 
     @staticmethod
     def get_transfers():

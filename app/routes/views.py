@@ -2,7 +2,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, login_user, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from app import db, login_manager
-from app.models.database import User, Setting, Operation, Region, FireDetail, Fire, DailyVault, Customer, CustomerTransaction
+from app.models.database import User, Setting, Operation, Region, FireDetail, Fire, DailyVault, Customer, \
+    CustomerTransaction, Transfer
 from app.models.system_manager import SystemManager
 from app.hardware.scale import ScaleManager
 from app.utils.helpers import change_region_tr, change_operation_tr
@@ -881,8 +882,15 @@ def ramat():
         actual_pure_gold = request.form.get('actual_pure_gold', type=float)
         notes = request.form.get('notes')
 
+        # Seçilen bölgeleri al
+        selected_regions = request.form.getlist('selected_regions')
+
+        if not selected_regions:
+            flash('En az bir bölge seçmelisiniz!', 'danger')
+            return redirect(url_for('main.ramat'))
+
         if actual_pure_gold:
-            success, message = SystemManager.create_ramat(current_user.id, actual_pure_gold, notes)
+            success, message = SystemManager.create_ramat(current_user.id, actual_pure_gold, selected_regions, notes)
             if success:
                 flash(message, 'success')
             else:
@@ -898,9 +906,8 @@ def ramat():
     total_pure_gold = 0
 
     for region in regions:
-        # Kasa ve masa bölgelerini ramat hesabına katmıyoruz
-        if region.name in ['kasa', 'safe', 'masa', 'table']:
-            continue
+        if region.name == 'kasa':
+            continue  # Kasa bölgesini ramat hesabına katmıyoruz
 
         region_pure_gold = 0
         setting_data = []
@@ -922,6 +929,7 @@ def ramat():
 
         if region_pure_gold > 0:
             region_data.append({
+                'id': region.id,  # Bölge ID'sini ekle
                 'name': region.name,
                 'settings': setting_data,
                 'total_pure_gold': region_pure_gold
@@ -1077,11 +1085,20 @@ def transfer_detail(transfer_id):
         flash('Devir işlemi bulunamadı!', 'danger')
         return redirect(url_for('main.transfers'))
 
+    # Önceki deviri bul
+    previous_transfer = None
+    if transfer_id:
+        # Bu devirden önceki en son deviri bul
+        previous_transfer = Transfer.query.filter(
+            Transfer.date < transfer_details['transfer'].date
+        ).order_by(Transfer.date.desc()).first()
+
     return render_template(
         'transfer_detail.html',
         transfer=transfer_details['transfer'],
         transactions=transfer_details['transactions'],
-        expenses=transfer_details['expenses']
+        expenses=transfer_details['expenses'],
+        previous_transfer=previous_transfer
     )
 
 
