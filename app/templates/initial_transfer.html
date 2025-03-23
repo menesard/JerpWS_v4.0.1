@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Başlangıç Deviri - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-plus-circle me-2"></i>Başlangıç Deviri Oluştur
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.transfers') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Devir Listesine Dön</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Başlangıç Deviri</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <div>
+                            <strong>Bilgi:</strong> Başlangıç deviri, ilk devir işlemini oluşturmak için kullanılır.
+                            Bu işlem, sistemde hiçbir devir olmadığında bir başlangıç değeri belirlemenize olanak tanır.
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" class="needs-validation mt-4" novalidate>
+                    <div class="mb-3">
+                        <label for="transfer_amount" class="form-label">Başlangıç Devir Miktarı (Has gram) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-coins"></i></span>
+                            <input type="number" step="0.0001" min="0.0001" class="form-control"
+                                   id="transfer_amount" name="transfer_amount" required>
+                            <span class="input-group-text">g</span>
+                            <div class="invalid-feedback">
+                                Geçerli bir devir miktarı giriniz.
+                            </div>
+                        </div>
+                        <div class="form-text">
+                            İlk devir için belirlediğiniz has altın miktarı (gram cinsinden). Bu değer pozitif olmalıdır.
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <div>
+                                <strong>Dikkat:</strong> Başlangıç deviri, yalnızca sistemde hiç devir kaydı yoksa oluşturulabilir.
+                                Bu işlem daha sonra müşteri işlemleri ve masraflar ile birlikte hesaplanacak devir değerleri için temel oluşturacaktır.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('main.transfers') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>İptal
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check-circle me-1"></i>Başlangıç Deviri Oluştur
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form doğrulama
+    const form = document.querySelector('.needs-validation');
+
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // İlk hatalı alana odaklan
+            const invalidInput = form.querySelector(':invalid');
+            if (invalidInput) {
+                invalidInput.focus();
+            }
+        }
+
+        form.classList.add('was-validated');
+    });
+
+    // Mobil optimizasyon
+    function optimizeForMobile() {
+        if (window.innerWidth <= 768) {
+            // Form elemanlarını büyüt
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.add('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.add('input-group-text-lg');
+            });
+        } else {
+            document.querySelectorAll('.form-control, .form-select').forEach(input => {
+                input.classList.remove('form-control-lg');
+            });
+
+            document.querySelectorAll('.input-group-text').forEach(span => {
+                span.classList.remove('input-group-text-lg');
+            });
+        }
+    }
+
+    // Mobil optimizasyonunu başlat
+    optimizeForMobile();
+    window.addEventListener('resize', optimizeForMobile);
+});
+</script>
+{% endblock %}
