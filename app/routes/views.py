@@ -1179,3 +1179,37 @@ def daily_vault_detail(vault_id):
         'daily_vault_detail.html',
         daily_vault=daily_vault
     )
+
+
+@main_bp.route('/transfers/initial', methods=['GET', 'POST'])
+@login_required
+def initial_transfer():
+    """Başlangıç deviri oluşturma sayfası"""
+    if not current_user.has_role('manager'):
+        flash('Bu sayfaya erişim için yönetici yetkisi gereklidir!', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    # Mevcut devir kontrolü
+    existing_transfer = Transfer.query.first()
+    if existing_transfer:
+        flash('Sistemde zaten devir işlemi mevcut. Başlangıç deviri sadece hiç devir yokken oluşturulabilir.',
+              'warning')
+        return redirect(url_for('main.transfers'))
+
+    if request.method == 'POST':
+        try:
+            transfer_amount = float(request.form.get('transfer_amount', 0))
+
+            success, message = SystemManager.create_initial_transfer(transfer_amount, current_user.id)
+
+            if success:
+                flash(message, 'success')
+                return redirect(url_for('main.transfers'))
+            else:
+                flash(message, 'danger')
+        except ValueError:
+            flash('Geçerli bir devir miktarı giriniz!', 'danger')
+        except Exception as e:
+            flash(f'Hata oluştu: {str(e)}', 'danger')
+
+    return render_template('initial_transfer.html')

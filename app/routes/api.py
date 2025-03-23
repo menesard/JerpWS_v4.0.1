@@ -616,3 +616,35 @@ def create_transfer():
             return jsonify({'error': message}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+
+@api_bp.route('/transfers/initial', methods=['POST'])
+@jwt_required()
+def create_initial_transfer():
+    """Başlangıç deviri oluştur"""
+    # Kullanıcı kimliğini al
+    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    if not current_user:
+        return jsonify({'error': 'Kullanıcı bulunamadı'}), 401
+
+    # Yönetici kontrolü
+    if not current_user.has_role('manager'):
+        return jsonify({'error': 'Bu işlem için yönetici yetkisi gereklidir'}), 403
+
+    # Request verisini al
+    data = request.get_json()
+    if not data or 'transfer_amount' not in data:
+        return jsonify({'error': 'Devir miktarı gereklidir'}), 400
+
+    try:
+        transfer_amount = float(data['transfer_amount'])
+
+        # İlk deviri oluştur
+        success, message = SystemManager.create_initial_transfer(transfer_amount, current_user.id)
+
+        if success:
+            return jsonify({'message': message}), 201
+        else:
+            return jsonify({'error': message}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400

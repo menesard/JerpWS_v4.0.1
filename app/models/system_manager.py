@@ -1157,6 +1157,41 @@ class SystemManager:
         }
 
     @staticmethod
+    def create_initial_transfer(transfer_amount, user_id):
+        """
+        İlk devir işlemini oluştur (hiç devir yoksa)
+
+        Args:
+            transfer_amount: Başlangıç devir miktarı (has gram olarak)
+            user_id: İşlemi yapan kullanıcı ID'si
+
+        Returns:
+            (True, mesaj) veya (False, hata mesajı)
+        """
+        # Önceki devir kontrolü
+        existing_transfer = Transfer.query.first()
+        if existing_transfer:
+            return False, "Sistemde zaten devir işlemi mevcut. Başlangıç deviri sadece hiç devir yokken oluşturulabilir."
+
+        # Devir miktarı kontrol
+        if transfer_amount <= 0:
+            return False, "Devir miktarı sıfır veya negatif olamaz"
+
+        # Başlangıç deviri oluştur
+        transfer = Transfer(
+            customer_total=0,  # Başlangıç deviri olduğu için değerler sıfır
+            labor_total=0,
+            expense_total=0,
+            transfer_amount=transfer_amount,
+            user_id=user_id
+        )
+
+        db.session.add(transfer)
+        db.session.commit()
+
+        return True, f"Başlangıç deviri başarıyla oluşturuldu. Devir miktarı: {transfer_amount:.4f} g"
+
+    @staticmethod
     def calculate_vault_expected():
         """Kasada beklenen değerleri hesapla"""
         # Kasa bölgesi
