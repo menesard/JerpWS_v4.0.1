@@ -90,9 +90,9 @@
                             {% for setting, data in balance.items() %}
                             <tr>
                                 <td data-label="Ayar">{{ setting }}</td>
-                                <td data-label="Giriş (g)">{{ "%.2f"|format(data.inputs) }}</td>
-                                <td data-label="Çıkış (g)">{{ "%.2f"|format(data.outputs) }}</td>
-                                <td data-label="Net (g)" class="{{ 'text-success fw-bold' if data.net > 0 else 'text-danger fw-bold' if data.net < 0 else '' }}">
+                                <td data-label="Giriş (g)" class="text-success">{{ "%.2f"|format(data.inputs) }}</td>
+                                <td data-label="Çıkış (g)" class="text-danger">{{ "%.2f"|format(data.outputs) }}</td>
+                                <td data-label="Net (g)" class="{{ 'text-danger fw-bold' if data.net > 0 else 'text-success fw-bold' if data.net < 0 else '' }}">
                                     {{ "%.2f"|format(data.net) }}
                                 </td>
                             </tr>
@@ -129,12 +129,12 @@
                                 <h6 class="card-title">
                                     <i class="fas fa-coins me-2 text-warning"></i>Has Altın
                                 </h6>
-                                <h3 class="{{ 'text-success' if pure_gold_balance.net_pure_gold > 0 else 'text-danger' if pure_gold_balance.net_pure_gold < 0 else '' }}">
+                                <h3 class="{{ 'text-danger' if pure_gold_balance.net_pure_gold > 0 else 'text-success' if pure_gold_balance.net_pure_gold < 0 else '' }}">
                                     {{ "%.4f"|format(pure_gold_balance.net_pure_gold) }} g
                                 </h3>
-                                <div class="d-flex justify-content-between small text-muted">
-                                    <span>Giriş: {{ "%.4f"|format(pure_gold_balance.pure_gold_inputs) }} g</span>
-                                    <span>Çıkış: {{ "%.4f"|format(pure_gold_balance.pure_gold_outputs) }} g</span>
+                                <div class="d-flex justify-content-between small">
+                                    <span class="text-success">Giriş: {{ "%.4f"|format(pure_gold_balance.pure_gold_inputs) }} g</span>
+                                    <span class="text-danger">Çıkış: {{ "%.4f"|format(pure_gold_balance.pure_gold_outputs) }} g</span>
                                 </div>
                             </div>
                         </div>
@@ -145,12 +145,12 @@
                                 <h6 class="card-title">
                                     <i class="fas fa-tools me-2 text-secondary"></i>İşçilik Has Karşılığı
                                 </h6>
-                                <h3 class="{{ 'text-success' if pure_gold_balance.net_labor_pure_gold > 0 else 'text-danger' if pure_gold_balance.net_labor_pure_gold < 0 else '' }}">
+                                <h3 class="{{ 'text-danger' if pure_gold_balance.net_labor_pure_gold > 0 else 'text-success' if pure_gold_balance.net_labor_pure_gold < 0 else '' }}">
                                     {{ "%.4f"|format(pure_gold_balance.net_labor_pure_gold) }} g
                                 </h3>
-                                <div class="d-flex justify-content-between small text-muted">
-                                    <span>Giriş: {{ "%.4f"|format(pure_gold_balance.labor_pure_gold_inputs) }} g</span>
-                                    <span>Çıkış: {{ "%.4f"|format(pure_gold_balance.labor_pure_gold_outputs) }} g</span>
+                                <div class="d-flex justify-content-between small">
+                                    <span class="text-success">Giriş: {{ "%.4f"|format(pure_gold_balance.labor_pure_gold_inputs) }} g</span>
+                                    <span class="text-danger">Çıkış: {{ "%.4f"|format(pure_gold_balance.labor_pure_gold_outputs) }} g</span>
                                 </div>
                             </div>
                         </div>
@@ -161,7 +161,7 @@
                                 <h6 class="card-title">
                                     <i class="fas fa-balance-scale me-2 text-primary"></i>Toplam Has Bakiye
                                 </h6>
-                                <h3 class="{{ 'text-success' if pure_gold_balance.total_net_pure_gold > 0 else 'text-danger' if pure_gold_balance.total_net_pure_gold < 0 else '' }}">
+                                <h3 class="{{ 'text-danger' if pure_gold_balance.total_net_pure_gold > 0 else 'text-success' if pure_gold_balance.total_net_pure_gold < 0 else '' }}">
                                     {{ "%.4f"|format(pure_gold_balance.total_net_pure_gold) }} g
                                 </h3>
                                 <div class="small text-muted">
@@ -242,7 +242,7 @@
                             <tr data-type="{{ 'in' if 'IN' in tx.type else 'out' }}" data-setting="{{ tx.setting }}">
                                 <td data-label="Tarih">{{ tx.date }}</td>
                                 <td data-label="İşlem">
-                                    <span class="badge {{ 'bg-danger' if 'OUT' in tx.type else 'bg-success' }}">
+                                    <span class="badge {{ 'bg-success' if 'IN' in tx.type else 'bg-danger' }}">
                                         {{ tx.type_tr }}
                                     </span>
                                     {% if tx.is_edited %}
@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         } else {
-            document.querySelectorAll('.card .list-group-item').forEach(item => {
+document.querySelectorAll('.card .list-group-item').forEach(item => {
                 const content = item.querySelector('.d-flex');
                 if (content) {
                     content.classList.add('justify-content-between');

@@ -10,20 +10,17 @@ with app.app_context():
     db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
     os.makedirs(db_path, exist_ok=True)
 
-    # Dizin izinlerini ayarla
-    os.chmod(db_path, 0o777)
-
-    # Veritabanı dosyasını oluştur ve izinlerini ayarla
+    # Veritabanı dosyasını oluştur
     db_file = os.path.join(db_path, 'jewelry.db')
-
-    # Eğer dosya zaten varsa izinlerini değiştir
-    if os.path.exists(db_file):
-        os.chmod(db_file, 0o666)
 
     # Veritabanı tablolarını oluştur
     db.create_all()
 
     # Başlangıç verilerini ekle
-    init_db()
+    try:
+        init_db()
+        print("Veritabanı başlangıç verileri başarıyla eklendi!")
+    except Exception as e:
+        print(f"Başlangıç verileri eklenirken hata oluştu: {e}")
 
     print("Veritabanı başarıyla başlatıldı!")

@@ -173,6 +173,7 @@ def init_db():
                 is_active=True
             )
             db.session.add(region)
+            print(f"Varsayılan bölge eklendi: {region_data['name']}")
 
     # Normal bölgeleri ekle
     for region_name in normal_regions:
@@ -198,6 +199,7 @@ def init_db():
             setting = Setting(name=setting_data['name'],
                               purity_per_thousand=setting_data['purity_per_thousand'])
             db.session.add(setting)
+            print(f"Ayar eklendi: {setting_data['name']}")
 
     # Admin kullanıcı
     if not User.query.filter_by(username='admin').first():
@@ -209,10 +211,15 @@ def init_db():
             role='admin'
         )
         db.session.add(admin)
+        print("Admin kullanıcı eklendi")
 
-    db.session.commit()
-
-
+    try:
+        db.session.commit()
+        print("Veritabanına başlangıç verileri başarıyla eklendi")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Veritabanına veri eklerken hata: {e}")
+        raise
 class Fire(db.Model):
     __tablename__ = 'fires'
 
