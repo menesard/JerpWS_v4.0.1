@@ -2,11 +2,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, login_user, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from app import db, login_manager
-from app.models.database import User, Setting, Operation, Region, FireDetail, Fire, DailyVault
+from app.models.database import User, Setting, Operation, Region, FireDetail, Fire, DailyVault, Customer, CustomerTransaction
 from app.models.system_manager import SystemManager
 from app.hardware.scale import ScaleManager
 from app.utils.helpers import change_region_tr, change_operation_tr
-from app.models.database import User, Setting, Customer, CustomerTransaction
 from app.models.database import TRANSACTION_PRODUCT_IN, TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_IN, TRANSACTION_SCRAP_OUT
 from datetime import datetime
 # Blueprint oluştur
@@ -158,8 +157,7 @@ def operations():
         region = request.form.get('region')
         gram = request.form.get('gram', type=float)
 
-        # Debug bilgisi
-        print(f"DEBUG: İşlem - Tip: {operation_type}, Bölge: {region}, Gram: {gram}, Ayar: {selected_setting}")
+        # İşlem bilgilerini hazırla
 
         # Kasa bölgesine manuel işlem yapılmasını engelle
         if region in ['safe', 'kasa']:
@@ -176,15 +174,9 @@ def operations():
         else:
             try:
                 if operation_type == 'add':
-                    # Debug bilgisi
-                    print(f"DEBUG: add_item çağrılıyor: {region}, {selected_setting}, {gram}")
                     result = SystemManager.add_item(region, selected_setting, gram, current_user.id)
-                    print(f"DEBUG: add_item sonucu: {result}")
                 elif operation_type == 'subtract':
-                    # Debug bilgisi
-                    print(f"DEBUG: remove_item çağrılıyor: {region}, {selected_setting}, {gram}")
                     result = SystemManager.remove_item(region, selected_setting, gram, current_user.id)
-                    print(f"DEBUG: remove_item sonucu: {result}")
 
                 if result:
                     flash('İşlem başarıyla tamamlandı!', 'success')
@@ -192,10 +184,7 @@ def operations():
                     flash('İşlem gerçekleştirilemedi!', 'danger')
 
             except Exception as e:
-                # Tüm hata bilgisini göster
-                import traceback
-                error_details = traceback.format_exc()
-                print(f"DEBUG HATA: {error_details}")
+                # Hata oluştu
                 flash(f'Hata oluştu: {str(e)}', 'danger')
 
         return redirect(url_for('main.operations'))
@@ -410,8 +399,7 @@ def customer_detail(customer_id):
         balance=balance,
         pure_gold_balance=pure_gold_balance,
         transactions=transactions,
-        selected_setting=selected_setting,
-        # transaction=??? eksik
+        selected_setting=selected_setting
     )
 
 
@@ -486,7 +474,7 @@ def add_customer_transaction(customer_id):
 
             except Exception as e:
                 flash(f'Hata oluştu: {str(e)}', 'danger')
-                print(f"İşlem eklenirken hata: {str(e)}")
+                pass  # Hata mesajı zaten flash ile gösteriliyor
 
     # İşlem türleri
     transaction_types = [
@@ -601,7 +589,7 @@ def edit_transaction(transaction_id):
 
             except Exception as e:
                 flash(f'Hata oluştu: {str(e)}', 'danger')
-                print(f"İşlem düzenlenirken hata: {str(e)}")
+                pass  # Hata mesajı zaten flash ile gösteriliyor
 
     # İşlem türleri
     transaction_types = [
@@ -669,7 +657,7 @@ def add_user():
         elif password != confirm_password:
             flash('Şifreler eşleşmiyor!', 'danger')
         else:
-            from werkzeug.security import generate_password_hash
+            # Kullanıcı oluşturma işlemi
             is_admin = role == 'admin'
             new_user = User(
                 username=username,
@@ -716,7 +704,6 @@ def edit_user(user_id):
 
             # Şifre değişikliği
             if password:
-                from werkzeug.security import generate_password_hash
                 user.password_hash = generate_password_hash(password)
 
             db.session.commit()
@@ -911,8 +898,9 @@ def ramat():
     total_pure_gold = 0
 
     for region in regions:
-        if region.name == 'kasa':
-            continue  # Kasa bölgesini ramat hesabına katmıyoruz
+        # Kasa ve masa bölgelerini ramat hesabına katmıyoruz
+        if region.name in ['kasa', 'safe', 'masa', 'table']:
+            continue
 
         region_pure_gold = 0
         setting_data = []

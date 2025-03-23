@@ -11,11 +11,8 @@ class SystemManager:
     @staticmethod
     def get_region_id(region_name):
         """Bölge adından ID'yi al (sadece aktif bölgeler)"""
-        print(f"DEBUG: get_region_id çağrıldı: {region_name}")
-
         # Giriş verisi kontrolü
         if not region_name:
-            print("DEBUG: Bölge adı boş!")
             return None
 
         # 'kasa' ve 'safe' bölgelerini standartlaştırma
@@ -45,27 +42,21 @@ class SystemManager:
             ).first()
 
         if region:
-            print(f"DEBUG: Bölge bulundu - {region.name} (ID: {region.id})")
             return region.id
         else:
-            print(f"DEBUG: Bölge bulunamadı - {region_name}")
             return None
 
     @staticmethod
     def get_region_status(region_name, setting_name):
         """Belirli bir bölgedeki belirli bir ayarın stok durumunu hesapla"""
-        print(f"DEBUG: get_region_status çağrıldı: {region_name}, {setting_name}")
-
         # Region ID'yi al
         region_id = SystemManager.get_region_id(region_name)
         if not region_id:
-            print(f"DEBUG: '{region_name}' bölgesi bulunamadı, 0 dönülüyor")
             return {setting_name: 0}
 
         # Setting ID'yi al
         setting = Setting.query.filter_by(name=setting_name).first()
         if not setting:
-            print(f"DEBUG: '{setting_name}' ayarı bulunamadı, 0 dönülüyor")
             return {setting_name: 0}
 
         try:
@@ -85,13 +76,8 @@ class SystemManager:
 
             # Net stok miktarını hesapla
             net_stock = float(added - subtracted)
-            print(
-                f"DEBUG: {region_name} bölgesindeki {setting_name} ayarı stok: {net_stock}g (Eklenen: {added}g, Çıkarılan: {subtracted}g)")
-
             return {setting_name: net_stock}
         except Exception as e:
-            import traceback
-            print(f"DEBUG Stok hesaplama hatası: {traceback.format_exc()}")
             return {setting_name: 0}
 
     @staticmethod
@@ -141,34 +127,25 @@ class SystemManager:
     @staticmethod
     def add_item(region_name, setting_name, gram, user_id=None):
         """Bölgeye altın ekle (masa üzerinden)"""
-        print(f"DEBUG: add_item başladı: {region_name}, {setting_name}, {gram}")
-
         # Check user permissions
         if user_id:
             user = User.query.get(user_id)
             if user and user.role == 'staff' and region_name in ['masa', 'table', 'yer']:
-                print(f"DEBUG: User with staff role has no permission for {region_name}")
                 return False
 
         region_id = SystemManager.get_region_id(region_name)
         setting_id = SystemManager.get_setting_id(setting_name)
         table_id = SystemManager.get_region_id('table')  # masa bölgesi ID'si
         safe_id = SystemManager.get_region_id('safe')  # kasa bölgesi ID'si
-        # Debug
-        print(f"DEBUG ID'ler: region_id={region_id}, setting_id={setting_id}, table_id={table_id}, safe_id={safe_id}")
 
         # ID kontrol
         if not region_id:
-            print(f"DEBUG: '{region_name}' bölgesi bulunamadı")
             return False
         if not setting_id:
-            print(f"DEBUG: '{setting_name}' ayarı bulunamadı")
             return False
         if not table_id:
-            print("DEBUG: 'table/masa' bölgesi bulunamadı")
             return False
         if not safe_id:
-            print("DEBUG: 'safe/kasa' bölgesi bulunamadı")
             return False
 
         try:
@@ -194,7 +171,7 @@ class SystemManager:
                 )
                 db.session.add(subtract_op)
                 db.session.add(add_op)
-                print(f"DEBUG: Kasadan masaya işlem eklendi: {gram}g {setting_name}")
+                # Kasadan masaya işlem eklendi
             else:
                 # Masadan diğer bölgeye transfer
                 # 1. Masadan çıkar
@@ -217,28 +194,22 @@ class SystemManager:
                 )
                 db.session.add(subtract_op)
                 db.session.add(add_op)
-                print(f"DEBUG: Masadan {region_name} bölgesine işlem eklendi: {gram}g {setting_name}")
+                # Masadan bölgeye işlem eklendi
 
             db.session.commit()
-            print("DEBUG: İşlem başarıyla tamamlandı")
             return True
         except Exception as e:
             db.session.rollback()
-            import traceback
-            print(f"DEBUG HATA: {traceback.format_exc()}")
-            print(f"DEBUG: İşlem hatası: {str(e)}")
             return False
 
     @staticmethod
     def remove_item(region_name, setting_name, gram, user_id=None):
         """Bölgeden altın çıkar (masa üzerinden)"""
-        print(f"DEBUG: remove_item başladı: {region_name}, {setting_name}, {gram}")
 
         # Check user permissions
         if user_id:
             user = User.query.get(user_id)
             if user and user.role == 'staff' and region_name in ['masa', 'table', 'yer']:
-                print(f"DEBUG: User with staff role has no permission for {region_name}")
                 return False
 
         region_id = SystemManager.get_region_id(region_name)
@@ -246,30 +217,21 @@ class SystemManager:
         table_id = SystemManager.get_region_id('table')  # masa bölgesi ID'si
         safe_id = SystemManager.get_region_id('safe')  # kasa bölgesi ID'si
 
-        # Debug
-        print(f"DEBUG ID'ler: region_id={region_id}, setting_id={setting_id}, table_id={table_id}, safe_id={safe_id}")
-
         # ID kontrol
         if not region_id:
-            print(f"DEBUG: '{region_name}' bölgesi bulunamadı")
             return False
         if not setting_id:
-            print(f"DEBUG: '{setting_name}' ayarı bulunamadı")
             return False
         if not table_id:
-            print("DEBUG: 'table/masa' bölgesi bulunamadı")
             return False
         if not safe_id:
-            print("DEBUG: 'safe/kasa' bölgesi bulunamadı")
             return False
 
         # Bölgedeki mevcut stok kontrolü
         region_status = SystemManager.get_region_status(region_name, setting_name)
         current_stock = region_status.get(setting_name, 0)
-        print(f"DEBUG: '{region_name}' bölgesindeki mevcut stok: {current_stock}g")
 
         if current_stock < float(gram):
-            print(f"DEBUG: Yetersiz stok! İstenilen: {gram}g, Mevcut: {current_stock}g")
             return False
 
         try:
@@ -295,7 +257,7 @@ class SystemManager:
                 )
                 db.session.add(subtract_op)
                 db.session.add(add_op)
-                print(f"DEBUG: Masadan kasaya işlem eklendi: {gram}g {setting_name}")
+                # Masadan kasaya işlem eklendi
             else:
                 # Diğer bölgeden masaya transfer
                 # 1. Bölgeden çıkar
@@ -318,16 +280,12 @@ class SystemManager:
                 )
                 db.session.add(subtract_op)
                 db.session.add(add_op)
-                print(f"DEBUG: {region_name} bölgesinden masaya işlem eklendi: {gram}g {setting_name}")
+                # Bölgeden masaya işlem eklendi
 
             db.session.commit()
-            print("DEBUG: İşlem başarıyla tamamlandı")
             return True
         except Exception as e:
             db.session.rollback()
-            import traceback
-            print(f"DEBUG HATA: {traceback.format_exc()}")
-            print(f"DEBUG: İşlem hatası: {str(e)}")
             return False
 
     @staticmethod
@@ -933,8 +891,8 @@ class SystemManager:
 
     @staticmethod
     def create_ramat(user_id, actual_pure_gold, notes=None):
-        """Ramat işlemi oluştur ve fire hesapla"""
-        # Tüm bölgelerdeki altınları topla
+        """Ramat işlemi oluştur ve fire hesapla - Bölge bazlı işlem"""
+        # Her bölge için ayrı olarak ramat işlemi yapılacak
         total_pure_gold = 0
         fire_details = []
 
@@ -943,8 +901,9 @@ class SystemManager:
 
         # Her bölge için ayar bazında detayları hesapla
         for region in regions:
-            if region.name == 'kasa':
-                continue  # Kasa bölgesini ramat hesabına katmıyoruz
+            # Kasa ve masa bölgelerini ramat hesabına katmıyoruz
+            if region.name in ['kasa', 'safe', 'masa', 'table']:
+                continue  
 
             for setting in Setting.query.all():
                 status = SystemManager.get_region_status(region.name, setting.name)
@@ -995,10 +954,10 @@ class SystemManager:
             db.session.add(fire_detail)
 
         # Ramat sonrası bölgelerden altınları çıkar ve kasaya ekle
-        # Her bölgeyi temizle (kasa hariç)
+        # Her bölgeyi temizle (kasa ve masa hariç)
         for region in regions:
-            if region.name == 'kasa':
-                continue
+            if region.name in ['kasa', 'safe', 'masa', 'table']:
+                continue  # Kasa ve masa bölgelerini işleme dahil etmiyoruz
 
             for setting in Setting.query.all():
                 status = SystemManager.get_region_status(region.name, setting.name)
@@ -1236,30 +1195,4 @@ class SystemManager:
 
         return query.order_by(DailyVault.date.desc()).all()
 
-    @staticmethod
-    def get_region_status(region_name, setting_name):
-        """Belirli bir bölgedeki belirli bir ayarın stok durumunu hesapla"""
-        region = Region.query.filter_by(name=region_name).first()
-        setting = Setting.query.filter_by(name=setting_name).first()
-
-        if not region or not setting:
-            return {setting_name: 0}
-
-        # Eklenen toplam
-        added = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
-            Operation.target_region_id == region.id,
-            Operation.setting_id == setting.id,
-            Operation.operation_type == OPERATION_ADD
-        ).scalar()
-
-        # Çıkarılan toplam
-        subtracted = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
-            Operation.source_region_id == region.id,
-            Operation.setting_id == setting.id,
-            Operation.operation_type == OPERATION_SUBTRACT
-        ).scalar()
-
-        # Net stok miktarını hesapla
-        net_stock = float(added - subtracted)
-
-        return {setting_name: net_stock}
+    # Duplicate method removed - using the implementation from line 54

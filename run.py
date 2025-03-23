@@ -8,7 +8,7 @@ from app import create_app
 from app.config import APP_NAME, APP_VERSION, APP_COMPANY
 
 # Çalışma ortamını al (varsayılan: production)
-env = os.environ.get('FLASK_ENV', 'production')
+env = 'production'
 app = create_app(env)
 
 if __name__ == "__main__":
