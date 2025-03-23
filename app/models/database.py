@@ -1,7 +1,7 @@
 from flask_login import UserMixin
 
 from app import db
-from datetime import datetime
+from datetime import datetime, UTC
 
 # İşlem türleri için sabitler
 OPERATION_ADD = 'ADD'
@@ -26,7 +26,7 @@ class Region(db.Model):
     name = db.Column(db.String(20), unique=True, nullable=False)
     is_active = db.Column(db.Boolean, default=True)  # Bölgenin aktif/silindi durumu
     is_default = db.Column(db.Boolean, default=False)  # Varsayılan bölge mi?
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
 
     def __repr__(self):
         return f"<Region {self.name}>"
@@ -35,7 +35,7 @@ class Operation(db.Model):
     __tablename__ = 'operations'
 
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.now(UTC), nullable=False)
     operation_type = db.Column(db.String(20), nullable=False)
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -65,7 +65,7 @@ class User(db.Model, UserMixin):
     is_admin = db.Column(db.Boolean, default=False)
     role = db.Column(db.String(20), default='staff')
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
 
     # İlişkiler
     created_by = db.relationship('User', remote_side=[id], backref=db.backref('created_users', lazy='dynamic'))
@@ -87,7 +87,7 @@ class Customer(db.Model):
     phone = db.Column(db.String(20))
     email = db.Column(db.String(100))
     address = db.Column(db.String(200))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
 
     # İlişkiler
     customer_transactions = db.relationship('CustomerTransaction',
@@ -111,7 +111,7 @@ class CustomerTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=False)
     transaction_type = db.Column(db.String(20), nullable=False)
-    transaction_date = db.Column(db.DateTime, default=datetime.utcnow)
+    transaction_date = db.Column(db.DateTime, default=datetime.now(UTC))
     product_description = db.Column(db.String(200))
     setting_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=False)
     gram = db.Column(db.Float, nullable=False)
@@ -224,7 +224,7 @@ class Fire(db.Model):
     __tablename__ = 'fires'
 
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.now(UTC), nullable=False)
     expected_pure_gold = db.Column(db.Float, nullable=False)  # Beklenen has miktar
     actual_pure_gold = db.Column(db.Float, nullable=False)  # Gerçek has miktar
     fire_amount = db.Column(db.Float, nullable=False)  # Fire miktarı (has cinsinden)
@@ -255,7 +255,7 @@ class Expense(db.Model):
     __tablename__ = 'expenses'
 
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    date = db.Column(db.DateTime, default=datetime.now(UTC), nullable=False)
     description = db.Column(db.String(200), nullable=False)
     amount_tl = db.Column(db.Float, default=0)  # TL cinsinden tutar
     amount_gold = db.Column(db.Float, default=0)  # Altın gram cinsinden tutar
@@ -272,7 +272,7 @@ class Transfer(db.Model):
     __tablename__ = 'transfers'
 
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    date = db.Column(db.DateTime, default=datetime.now(UTC), nullable=False)
     customer_total = db.Column(db.Float, nullable=False)  # Müşteri işlemleri toplamı
     labor_total = db.Column(db.Float, nullable=False)  # İşçilik toplamı
     expense_total = db.Column(db.Float, nullable=False)  # Masraf toplamı
@@ -288,7 +288,7 @@ class DailyVault(db.Model):
     __tablename__ = 'daily_vaults'
 
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, default=datetime.utcnow().date, nullable=False)
+    date = db.Column(db.Date, default=datetime.now(UTC).date, nullable=False)
     expected_total = db.Column(db.Float, nullable=False)  # Sistemde beklenen toplam
     actual_total = db.Column(db.Float, nullable=False)  # Girilen gerçek toplam
     difference = db.Column(db.Float, nullable=False)  # Fark
