@@ -167,9 +167,124 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
+<style>
+/* Mobil görünüm optimizasyonları */
+@media (max-width: 768px) {
+    /* Ana tablo düzeni */
+    .table-responsive {
+        border: 0;
+    }
+
+    /* Bölge başlık satırı */
+    tr.table-primary {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        margin-bottom: 5px;
+        border-radius: 6px;
+        background-color: #cfe2ff !important;
+        position: relative;
+    }
+
+    tr.table-primary td {
+        border: none !important;
+        padding: 0 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    tr.table-primary td:first-child {
+        width: 30px;
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    tr.table-primary td.fw-bold {
+        flex: 1;
+        padding-right: 40px !important;
+    }
+
+    /* Detay satırları */
+    tr.region-detail {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 4px;
+        padding: 8px 8px 8px 38px;
+        margin-bottom: 2px;
+        background-color: #f8f9fa;
+        border-left: 3px solid #cfe2ff;
+    }
+
+    tr.region-detail td {
+        border: none !important;
+        padding: 4px !important;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    tr.region-detail td:nth-child(1),
+    tr.region-detail td:nth-child(2) {
+        display: none;
+    }
+
+    tr.region-detail td:nth-child(3)::before,
+    tr.region-detail td:nth-child(4)::before,
+    tr.region-detail td:nth-child(5)::before,
+    tr.region-detail td:nth-child(6)::before {
+        font-weight: 500;
+        color: #666;
+        min-width: 70px;
+    }
+
+    tr.region-detail td:nth-child(3)::before { content: "Ayar:"; }
+    tr.region-detail td:nth-child(4)::before { content: "Gram:"; }
+    tr.region-detail td:nth-child(5)::before { content: "Milyem:"; }
+    tr.region-detail td:nth-child(6)::before { content: "Has:"; }
+
+    /* Checkbox stilleri */
+    .form-check {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 20px;
+    }
+
+    .form-check-input {
+        margin: 0;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+
+    /* Tablo footer'ı */
+    .table tfoot tr {
+        display: grid;
+        grid-template-columns: 30px 1fr auto;
+        gap: 8px;
+        align-items: center;
+        padding: 10px;
+        background-color: #212529;
+    }
+
+    .table tfoot td {
+        padding: 0 !important;
+        white-space: nowrap;
+    }
+
+    .table tfoot td:first-child {
+        width: 30px;
+    }
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const regionCheckboxes = document.querySelectorAll('.region-checkbox');
@@ -333,6 +448,31 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.region-detail').forEach(detail => {
         detail.classList.add('d-none');
     });
+
+    // Mobil optimizasyonu için ek fonksiyonlar
+    function optimizeForMobile() {
+        const isMobile = window.innerWidth <= 768;
+        const table = document.querySelector('.table');
+        
+        if (isMobile) {
+            table.classList.add('table-mobile');
+            
+            // Detay satırlarına açıklayıcı etiketler ekle
+            document.querySelectorAll('.region-detail').forEach(row => {
+                const cells = row.querySelectorAll('td');
+                cells[2].setAttribute('data-label', 'Ayar:');
+                cells[3].setAttribute('data-label', 'Gram:');
+                cells[4].setAttribute('data-label', 'Milyem:');
+                cells[5].setAttribute('data-label', 'Has:');
+            });
+        } else {
+            table.classList.remove('table-mobile');
+        }
+    }
+
+    // Sayfa yüklendiğinde ve pencere boyutu değiştiğinde optimizasyonu uygula
+    window.addEventListener('load', optimizeForMobile);
+    window.addEventListener('resize', optimizeForMobile);
 });
 </script>
 {% endblock %}

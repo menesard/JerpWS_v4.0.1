@@ -108,15 +108,27 @@
                             <tr>
                                 <td data-label="Zaman">{{ log.time }}</td>
                                 <td data-label="İşlem">
-                                    <span class="badge {% if log.operation_type == 'ADD' %}bg-success{% else %}bg-danger{% endif %}">
-                                        {{ change_operation_tr(log.operation_type) }}
-                                    </span>
+                                    <div class="d-inline-block">
+                                        <span class="badge {% if log.operation_type == 'ADD' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ change_operation_tr(log.operation_type) }}
+                                        </span>
+                                    </div>
                                 </td>
-                                <td data-label="Kaynak">{{ change_region_tr(log.source_region) }}</td>
-                                <td data-label="Hedef">{{ change_region_tr(log.target_region) }}</td>
-                                <td data-label="Ayar">{{ log.setting }}</td>
-                                <td data-label="Gram">{{ log.gram }}</td>
-                                <td data-label="Kullanıcı" class="d-none d-md-table-cell">{{ log.username }}</td>
+                                <td data-label="Kaynak">
+                                    <div class="d-inline-block">{{ change_region_tr(log.source_region) }}</div>
+                                </td>
+                                <td data-label="Hedef">
+                                    <div class="d-inline-block">{{ change_region_tr(log.target_region) }}</div>
+                                </td>
+                                <td data-label="Ayar">
+                                    <div class="d-inline-block">{{ log.setting }}</div>
+                                </td>
+                                <td data-label="Gram">
+                                    <div class="d-inline-block">{{ log.gram }}</div>
+                                </td>
+                                <td data-label="Kullanıcı" class="d-none d-md-table-cell">
+                                    <div class="d-inline-block">{{ log.username }}</div>
+                                </td>
                             </tr>
                             {% else %}
                             <tr>
@@ -262,6 +274,155 @@
     </div>
 </div>
 
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Bölge</th>
+                <th>Ayar</th>
+                <th>Gram</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in status %}
+                {% if not current_user.role == 'staff' or (item.region_en != 'masa' and item.region_en != 'table' and item.region_en != 'yer') %}
+                    <tr>
+                        <td data-label="Bölge">{{ item.region }}</td>
+                        <td data-label="Ayar">{{ item.setting }}</td>
+                        <td data-label="Gram">{{ item.gram }}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+/* Mobil tablo görünümü için CSS düzeltmeleri */
+@media screen and (max-width: 768px) {
+    /* Tüm tablolar için genel kurallar */
+    .table {
+        width: 100% !important;
+        border: 0 !important;
+    }
+
+    /* Tablo başlıklarını gizle */
+    .table thead {
+        display: none !important;
+    }
+
+    /* Tablo satırlarını blok olarak göster */
+    .table tbody tr {
+        display: block !important;
+        margin-bottom: 1rem !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 0.25rem !important;
+        background-color: #fff !important;
+    }
+
+    /* Tablo hücrelerini düzenle */
+    .table td,
+    .table th {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 0.75rem !important;
+        text-align: right !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        min-height: 50px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Son hücrenin alt çizgisini kaldır */
+    .table td:last-child {
+        border-bottom: 0 !important;
+    }
+
+    /* Hücre etiketleri için stil */
+    .table td::before {
+        content: attr(data-label);
+        float: left !important;
+        font-weight: bold !important;
+        text-align: left !important;
+        padding-right: 10px !important;
+        width: auto !important;
+        white-space: normal !important;
+    }
+
+    /* Hücre içeriği için stil */
+    .table td > div,
+    .table td > span {
+        text-align: right !important;
+        width: auto !important;
+        max-width: 50% !important;
+        margin-left: auto !important;
+    }
+
+    /* Metin taşma kontrolü - En önemli kısım */
+    .table td,
+    .table td *,
+    .table td div,
+    .table td span,
+    .table-mobile td,
+    .table-mobile td *,
+    .table-responsive td,
+    .table-responsive td * {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        word-break: break-word !important;
+        word-wrap: break-word !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        width: auto !important;
+    }
+
+    /* Badge'ler için özel stil */
+    .badge {
+        display: inline-block !important;
+        white-space: normal !important;
+        text-align: center !important;
+        line-height: 1.2 !important;
+        padding: 5px 8px !important;
+        height: auto !important;
+        width: auto !important;
+    }
+
+    /* Responsive tablo container'ı için */
+    .table-responsive {
+        overflow-x: visible !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* Tablo container'ı içindeki tüm elementler */
+    .table-responsive * {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+    }
+}
+
+/* Genel tablo stilleri */
+.table td,
+.table th {
+    vertical-align: middle !important;
+}
+
+/* Region status grid için özel stiller */
+.region-status-grid {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+@media (max-width: 768px) {
+    .region-status-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+}
+</style>
+
 {% endblock %}
 
 {% block scripts %}
@@ -357,47 +518,41 @@ document.addEventListener('DOMContentLoaded', function() {
                         regionContainer.innerHTML = '';
 
                         let hasContent = false;
-                        // Her bölge için bir kart oluştur
+                        
+                        // Öncelikli bölgeler
+                        const priorityRegions = ['kasa', 'safe', 'masa', 'table', 'yer'];
+                        
+                        // Önce öncelikli bölgeleri ekle
+                        priorityRegions.forEach(region => {
+                            if (regionStatus[region]) {
+                                for (const [setting, gram] of Object.entries(regionStatus[region])) {
+                                    hasContent = true;
+                                    let regionTr = region;
+                                    
+                                    // Bölge adı çevirisi
+                                    if (region === 'safe') regionTr = 'kasa';
+                                    else if (region === 'table') regionTr = 'masa';
+                                    
+                                    createRegionItem(regionContainer, region, regionTr, setting, gram);
+                                }
+                            }
+                        });
+                        
+                        // Sonra diğer bölgeleri ekle
                         for (const [region, settings] of Object.entries(regionStatus)) {
-                            for (const [setting, gram] of Object.entries(settings)) {
-                                hasContent = true;
-                                let regionTr = region;
-
-                                // Bölge adı çevirisi
-                                if (region === 'safe') regionTr = 'kasa';
-                                else if (region === 'table') regionTr = 'masa';
-                                else if (region === 'polish') regionTr = 'cila';
-                                else if (region === 'melting') regionTr = 'eritme';
-                                else if (region === 'saw') regionTr = 'patlatma';
-                                else if (region === 'acid') regionTr = 'boru';
-
-                                const item = document.createElement('div');
-                                item.className = 'region-status-item';
-
-                                // İkon seçimi
-                                let iconClass = 'fa-box';
-                                if (region === 'safe') iconClass = 'fa-vault';
-                                else if (region === 'table') iconClass = 'fa-table';
-                                else if (region === 'polish') iconClass = 'fa-brush';
-                                else if (region === 'melting') iconClass = 'fa-fire';
-                                else if (region === 'saw') iconClass = 'fa-cut';
-                                else if (region === 'acid') iconClass = 'fa-flask';
-
-                                // İçerik oluşturma
-                                item.innerHTML = `
-                                    <div class="region-icon-container">
-                                        <i class="fas ${iconClass} region-icon"></i>
-                                    </div>
-                                    <div class="region-details">
-                                        <h6 class="mb-0">${regionTr}</h6>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="region-amount fw-bold ${gram > 0 ? 'text-success' : 'text-muted'}">${parseFloat(gram).toFixed(2)} g</span>
-                                            <span class="region-setting badge bg-primary">${setting}</span>
-                                        </div>
-                                    </div>
-                                `;
-
-                                regionContainer.appendChild(item);
+                            if (!priorityRegions.includes(region)) {
+                                for (const [setting, gram] of Object.entries(settings)) {
+                                    hasContent = true;
+                                    let regionTr = region;
+                                    
+                                    // Bölge adı çevirisi
+                                    if (region === 'polish') regionTr = 'cila';
+                                    else if (region === 'melting') regionTr = 'eritme';
+                                    else if (region === 'saw') regionTr = 'patlatma';
+                                    else if (region === 'acid') regionTr = 'boru';
+                                    
+                                    createRegionItem(regionContainer, region, regionTr, setting, gram);
+                                }
                             }
                         }
 
@@ -428,6 +583,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     `;
                 }
             });
+    }
+
+    // Bölge öğesi oluşturma yardımcı fonksiyonu
+    function createRegionItem(container, region, regionTr, setting, gram) {
+        const item = document.createElement('div');
+        item.className = 'region-status-item';
+
+        // İkon seçimi
+        let iconClass = 'fa-box';
+        if (region === 'safe' || region === 'kasa') iconClass = 'fa-vault';
+        else if (region === 'table' || region === 'masa') iconClass = 'fa-table';
+        else if (region === 'polish') iconClass = 'fa-brush';
+        else if (region === 'melting') iconClass = 'fa-fire';
+        else if (region === 'saw') iconClass = 'fa-cut';
+        else if (region === 'acid') iconClass = 'fa-flask';
+
+        // İçerik oluşturma
+        item.innerHTML = `
+            <div class="region-icon-container">
+                <i class="fas ${iconClass} region-icon"></i>
+            </div>
+            <div class="region-details">
+                <h6 class="mb-0">${regionTr}</h6>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="region-amount fw-bold ${gram > 0 ? 'text-success' : 'text-muted'}">${parseFloat(gram).toFixed(2)} g</span>
+                    <span class="region-setting badge bg-primary">${setting}</span>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(item);
     }
 
     // Sayfa yüklendiğinde çağır

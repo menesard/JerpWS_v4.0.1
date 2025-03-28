@@ -1,9 +1,25 @@
 from datetime import datetime
+import requests
+import pytz
 
-def format_time(timestamp):
+def format_time(timestamp, timezone_str=None):
     """Zaman damgasını formatlı bir şekilde döndür"""
     if isinstance(timestamp, str):
-        timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+        try:
+            timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            try:
+                timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            except ValueError:
+                return timestamp
+    
+    # Zaman dilimi dönüşümü yap (eğer belirtilmişse)
+    if timezone_str and timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=pytz.UTC)
+        local_timezone = pytz.timezone(timezone_str)
+        timestamp = timestamp.astimezone(local_timezone)
+    
+    # Türkçe tarih formatı: gün-ay-yıl saat:dakika:saniye
     return timestamp.strftime('%d-%m-%Y %H:%M:%S')
 
 def change_region_tr(region_name):
@@ -50,3 +66,45 @@ def get_transaction_type_tr(transaction_type):
         'SCRAP_OUT': 'HURDA ÇIKIŞ'
     }
     return type_map.get(transaction_type, transaction_type)
+
+def get_timezone_from_ip(ip_address):
+    """
+    IP adresinden zaman dilimini tespit eder.
+    Ücretsiz ipinfo.io servisi kullanılıyor.
+    """
+    try:
+        response = requests.get(f"https://ipinfo.io/{ip_address}/json")
+        if response.status_code == 200:
+            data = response.json()
+            timezone = data.get('timezone')
+            if timezone:
+                return timezone
+    except Exception as e:
+        print(f"IP zaman dilimi tespitinde hata: {e}")
+    
+    return 'UTC'  # Varsayılan olarak UTC döndür
+
+def convert_utc_to_local(utc_time, timezone_str):
+    """
+    UTC zamanını verilen zaman dilimine çevirir
+    """
+    if not utc_time:
+        return None
+        
+    if isinstance(utc_time, str):
+        try:
+            utc_time = datetime.fromisoformat(utc_time.replace('Z', '+00:00'))
+        except ValueError:
+            try:
+                utc_time = datetime.strptime(utc_time, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                return utc_time
+    
+    if not isinstance(utc_time, datetime):
+        return utc_time
+        
+    utc_time = utc_time.replace(tzinfo=pytz.UTC)
+    local_timezone = pytz.timezone(timezone_str)
+    local_time = utc_time.astimezone(local_timezone)
+    
+    return local_time

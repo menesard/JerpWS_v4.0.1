@@ -1,0 +1,47 @@
+/* Mobil tablo görünümü için genel CSS */
+@media screen and (max-width: 768px) {
+    .table-mobile {
+        border: 0;
+    }
+
+    .table-mobile thead {
+        display: none;
+    }
+
+    .table-mobile tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        background-color: #fff;
+    }
+
+    .table-mobile td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        text-align: right;
+        border-bottom: 1px solid #dee2e6;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+    }
+
+    .table-mobile td:last-child {
+        border-bottom: 0;
+    }
+
+    .table-mobile td::before {
+        content: attr(data-label);
+        float: left;
+        font-weight: bold;
+        text-align: left;
+        padding-right: 10px;
+    }
+
+    .table-mobile td > * {
+        max-width: 50%;
+        word-wrap: break-word;
+    }
+} 

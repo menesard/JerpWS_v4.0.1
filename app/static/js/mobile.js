@@ -149,30 +149,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const optimizeTableContent = function () {
         if (window.innerWidth <= 576) {
             document.querySelectorAll('table td').forEach(cell => {
-                // Uzun içerikleri kısalt
-                if (cell.textContent.length > 20 && !cell.querySelector('a, button')) {
-                    cell.setAttribute('data-full-content', cell.textContent);
-                    cell.textContent = cell.textContent.substring(0, 20) + '...';
-
-                    // Tıklandığında tam içeriği göster
-                    cell.addEventListener('click', function () {
-                        const fullContent = this.getAttribute('data-full-content');
-                        const isExpanded = this.classList.contains('expanded');
-
-                        if (isExpanded) {
-                            this.textContent = fullContent.substring(0, 20) + '...';
-                            this.classList.remove('expanded');
-                        } else {
-                            this.textContent = fullContent;
-                            this.classList.add('expanded');
-                        }
-                    });
-                }
+                // Tüm hücrelerin içeriğinin tam görünmesini sağla
+                cell.style.whiteSpace = 'normal';
+                cell.style.wordBreak = 'break-word';
             });
         }
     };
 
     optimizeTableContent();
+    window.addEventListener('resize', optimizeTableContent);
 
     // Form elemanlarını mobil için optimize et
     const optimizeFormElements = function () {

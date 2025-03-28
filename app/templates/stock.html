@@ -57,7 +57,7 @@
                         <label for="min-gram" class="form-label">Minimum Gram</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-weight-hanging"></i></span>
-                            <input type="number" id="min-gram" class="form-control" min="0" step="0.01" value="0">
+                            <input type="number" id="min-gram" class="form-control" min="0" step="0.01" value="0.01">
                             <span class="input-group-text">g</span>
                         </div>
                     </div>
@@ -101,7 +101,9 @@
                                 <td>{{ item.setting }}</td>
                                 <td>{{ item.gram }}</td>
                                 <td>
-                                    {% if item.gram|float > 0 %}
+                                    {% if item.gram|float < 0 %}
+                                    <span class="badge bg-danger">Sorun</span>
+                                    {% elif item.gram|float > 0 %}
                                     <span class="badge bg-success">Mevcut</span>
                                     {% else %}
                                     <span class="badge bg-secondary">Boş</span>
@@ -236,9 +238,14 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('modal-gram').textContent = gram + ' g';
 
             const statusElement = document.getElementById('modal-status');
-            statusElement.innerHTML = parseFloat(gram) > 0
-                ? '<span class="badge bg-success">Mevcut</span>'
-                : '<span class="badge bg-secondary">Boş</span>';
+            const gramValue = parseFloat(gram);
+            if (gramValue < 0) {
+                statusElement.innerHTML = '<span class="badge bg-danger">Sorun</span>';
+            } else if (gramValue > 0) {
+                statusElement.innerHTML = '<span class="badge bg-success">Mevcut</span>';
+            } else {
+                statusElement.innerHTML = '<span class="badge bg-secondary">Boş</span>';
+            }
 
             stockDetailModal.show();
         });
@@ -260,7 +267,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const settingMatch = setting === 'all' || rowSetting === setting;
             const regionMatch = region === 'all' || rowRegion === region;
-            const gramMatch = rowGram >= minGram;
+            // Negatif stokları her zaman göster veya minimum gram şartını sağlayanları göster
+            const gramMatch = rowGram < 0 || rowGram >= minGram;
 
             if (settingMatch && regionMatch && gramMatch) {
                 row.style.display = '';
@@ -333,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Tablo görünümünü mobil uyumlu hale getir
             stockTable.classList.add('table-mobile');
         } else {
-document.querySelectorAll('.form-select, .form-control').forEach(el => {
+            document.querySelectorAll('.form-select, .form-control').forEach(el => {
                 el.classList.remove('form-control-lg');
             });
 

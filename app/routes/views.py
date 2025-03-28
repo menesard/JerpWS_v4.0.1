@@ -1,14 +1,16 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, make_response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, make_response, g
 from flask_login import login_required, login_user, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from app import db, login_manager
 from app.models.database import User, Setting, Operation, Region, FireDetail, Fire, DailyVault, Customer, \
-    CustomerTransaction, Transfer
+    CustomerTransaction, Transfer, GlobalSetting
 from app.models.system_manager import SystemManager
 from app.hardware.scale import ScaleManager
-from app.utils.helpers import change_region_tr, change_operation_tr
+from app.utils.helpers import change_region_tr, change_operation_tr, convert_utc_to_local
 from app.models.database import TRANSACTION_PRODUCT_IN, TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_IN, TRANSACTION_SCRAP_OUT
-from datetime import datetime
+from datetime import datetime, UTC
+from app.utils.decorators import with_user_timezone
+
 # Blueprint oluştur
 main_bp = Blueprint('main', __name__)
 
@@ -74,6 +76,24 @@ def select_setting():
     if request.method == 'POST':
         setting = request.form.get('setting')
         if setting:
+            # Sadece yönetici ve admin kullanıcıları ayar seçebilir
+            if not current_user.is_admin and current_user.role != 'manager':
+                flash('Ayar seçme yetkiniz yok!', 'danger')
+                return redirect(url_for('main.dashboard'))
+
+            # Global ayarı güncelle
+            global_setting = GlobalSetting.query.filter_by(key='active_setting').first()
+            if not global_setting:
+                global_setting = GlobalSetting(key='active_setting', value=setting)
+            else:
+                global_setting.value = setting
+                global_setting.updated_by_id = current_user.id
+                global_setting.updated_at = datetime.now(UTC)
+            
+            db.session.add(global_setting)
+            db.session.commit()
+
+            # Tüm kullanıcıların session'ına ayarı kaydet
             session['selected_setting'] = setting
             return redirect(url_for('main.dashboard'))
 
@@ -81,8 +101,9 @@ def select_setting():
     return render_template('select_setting.html', settings=settings)
 
 
-@main_bp.route('/dashboard')
+@main_bp.route('/dashboard', methods=['GET'])
 @login_required
+@with_user_timezone
 def dashboard():
     """Kontrol paneli sayfası"""
     # Prevent staff users from accessing dashboard
@@ -99,28 +120,52 @@ def dashboard():
     # Ağırlık bilgisini al
     scale_manager = ScaleManager()
     if not scale_manager.scale:
-        scale_manager.initialize(simulation_mode=True)
         scale_manager.start_monitoring()
 
     weight, is_valid = scale_manager.get_current_weight()
+    if not is_valid:
+        weight = 0.00
 
     # Bölge durumlarını al
     status = SystemManager.get_status(selected_setting)
 
     # Biraz format düzenlemesi
     formatted_status = []
+    priority_regions = ['kasa', 'safe', 'masa', 'table', 'yer']
+    
+    # Öncelikli bölgeleri ekle
+    for priority_region in priority_regions:
+        if priority_region in status:
+            region_tr = change_region_tr(priority_region)
+            for setting, gram in status[priority_region].items():
+                formatted_status.append({
+                    'region': region_tr,
+                    'region_en': priority_region,
+                    'setting': setting,
+                    'gram': f"{gram:.2f}"
+                })
+    
+    # Diğer bölgeleri ekle
     for region, setting_data in status.items():
-        region_tr = change_region_tr(region)
-        for setting, gram in setting_data.items():
-            formatted_status.append({
-                'region': region_tr,
-                'region_en': region,
-                'setting': setting,
-                'gram': f"{gram:.2f}"
-            })
+        if region not in priority_regions:
+            region_tr = change_region_tr(region)
+            for setting, gram in setting_data.items():
+                formatted_status.append({
+                    'region': region_tr,
+                    'region_en': region,
+                    'setting': setting,
+                    'gram': f"{gram:.2f}"
+                })
 
     # Son işlemleri al
     logs = SystemManager.get_logs(10)  # Son 10 işlem
+
+    # Verilerdeki tarih alanlarını kullanıcının zaman dilimine çevir
+    for record in logs:
+        if hasattr(record, 'created_at'):
+            record.created_at = convert_utc_to_local(record.created_at, g.user_timezone)
+        if hasattr(record, 'updated_at'):
+            record.updated_at = convert_utc_to_local(record.updated_at, g.user_timezone)
 
     return render_template(
         'dashboard.html',
@@ -148,17 +193,21 @@ def operations():
     # Ağırlık bilgisini al
     scale_manager = ScaleManager()
     if not scale_manager.scale:
-        scale_manager.initialize(simulation_mode=True)
         scale_manager.start_monitoring()
 
     weight, is_valid = scale_manager.get_current_weight()
+    if not is_valid:
+        weight = 0.00
 
     if request.method == 'POST':
         operation_type = request.form.get('operation_type')
         region = request.form.get('region')
         gram = request.form.get('gram', type=float)
 
-        # İşlem bilgilerini hazırla
+        # Staff kullanıcıları için masa bölgesi kontrolü
+        if current_user.role == 'staff' and region in ['masa', 'table']:
+            flash('Masa bölgesini kullanma yetkiniz yok!', 'danger')
+            return redirect(url_for('main.operations'))
 
         # Kasa bölgesine manuel işlem yapılmasını engelle
         if region in ['safe', 'kasa']:
@@ -185,7 +234,6 @@ def operations():
                     flash('İşlem gerçekleştirilemedi!', 'danger')
 
             except Exception as e:
-                # Hata oluştu
                 flash(f'Hata oluştu: {str(e)}', 'danger')
 
         return redirect(url_for('main.operations'))
@@ -193,12 +241,12 @@ def operations():
     # Önce tüm aktif bölgeleri al
     all_regions = Region.query.filter_by(is_active=True).all()
 
-    # Filter regions for staff users - Hide 'yer' for staff users
+    # Filter regions for staff users - Hide 'yer' and 'masa' for staff users
     regions = []
     for region in all_regions:
         if region.name not in ['safe', 'kasa']:
-            if current_user.role == 'staff' and region.name == 'yer':
-                continue  # Skip 'yer' for staff users
+            if current_user.role == 'staff' and region.name in ['yer', 'masa', 'table']:
+                continue  # Skip 'yer' and 'masa' for staff users
             regions.append({
                 'name': region.name,
                 'name_tr': change_region_tr(region.name)
@@ -215,6 +263,7 @@ def operations():
 
 @main_bp.route('/history')
 @login_required
+@with_user_timezone
 def history():
     """İşlem geçmişi sayfası"""
     if 'selected_setting' not in session:
@@ -222,8 +271,10 @@ def history():
 
     logs = SystemManager.get_logs(50)  # Son 50 işlem
 
-    # İşlemleri formatla
+    # İşlemlerin tarih alanlarını yerel zaman dilimine dönüştür
     for log in logs:
+        if 'timestamp' in log:
+            log['timestamp'] = convert_utc_to_local(log['timestamp'], g.user_timezone)
         log['operation_type_tr'] = change_operation_tr(log['operation_type'])
         log['source_region_tr'] = change_region_tr(log['source_region'])
         log['target_region_tr'] = change_region_tr(log['target_region'])
@@ -262,11 +313,10 @@ def settings():
         # Terazi ayarları
         elif 'scale_settings' in request.form:
             port = request.form.get('scale_port')
-            simulation = 'simulation_mode' in request.form
 
             scale_manager = ScaleManager()
             scale_manager.close()
-            result = scale_manager.initialize(port=port, simulation_mode=simulation)
+            result = scale_manager.initialize(port=port)
             scale_manager.start_monitoring()
 
             if result:
@@ -277,17 +327,14 @@ def settings():
     # Terazi durumunu al
     scale_manager = ScaleManager()
     if not scale_manager.scale:
-        scale_manager.initialize(simulation_mode=True)
-        scale_manager.start_monitoring()
+        scale_manager.initialize()  # Varsayılan port ile başlat
 
-    scale_connected = scale_manager.scale.is_connected
-    scale_simulation = scale_manager.scale.simulation_mode
-    scale_port = scale_manager.scale.port
+    scale_connected = scale_manager.scale.is_connected if scale_manager.scale else False
+    scale_port = scale_manager.scale.port if scale_manager.scale else None
 
     return render_template(
         'settings.html',
         scale_connected=scale_connected,
-        scale_simulation=scale_simulation,
         scale_port=scale_port
     )
 
@@ -296,9 +343,28 @@ def settings():
 @login_required
 def change_setting():
     """Ayar değiştirme"""
+    # Sadece yönetici ve admin kullanıcıları ayar değiştirebilir
+    if not current_user.is_admin and current_user.role != 'manager':
+        flash('Ayar değiştirme yetkiniz yok!', 'danger')
+        return redirect(request.referrer or url_for('main.dashboard'))
+
     setting = request.form.get('setting')
     if setting:
+        # Global ayarı güncelle
+        global_setting = GlobalSetting.query.filter_by(key='active_setting').first()
+        if not global_setting:
+            global_setting = GlobalSetting(key='active_setting', value=setting)
+        else:
+            global_setting.value = setting
+            global_setting.updated_by_id = current_user.id
+            global_setting.updated_at = datetime.now(UTC)
+        
+        db.session.add(global_setting)
+        db.session.commit()
+
+        # Tüm kullanıcıların session'ına ayarı kaydet
         session['selected_setting'] = setting
+        flash('Ayar başarıyla güncellendi!', 'success')
     return redirect(request.referrer or url_for('main.dashboard'))
 
 
@@ -430,10 +496,11 @@ def add_customer_transaction(customer_id):
     # Ağırlık bilgisini al
     scale_manager = ScaleManager()
     if not scale_manager.scale:
-        scale_manager.initialize(simulation_mode=True)
         scale_manager.start_monitoring()
 
     weight, is_valid = scale_manager.get_current_weight()
+    if not is_valid:
+        weight = 0.00
 
     if request.method == 'POST':
         transaction_type = request.form.get('transaction_type')
@@ -543,10 +610,11 @@ def edit_transaction(transaction_id):
     # Ağırlık bilgisini al
     scale_manager = ScaleManager()
     if not scale_manager.scale:
-        scale_manager.initialize(simulation_mode=True)
         scale_manager.start_monitoring()
 
     weight, is_valid = scale_manager.get_current_weight()
+    if not is_valid:
+        weight = 0.00
 
     if request.method == 'POST':
         transaction_type = request.form.get('transaction_type')
@@ -1213,3 +1281,12 @@ def initial_transfer():
             flash(f'Hata oluştu: {str(e)}', 'danger')
 
     return render_template('initial_transfer.html')
+
+
+@main_bp.before_request
+def update_active_setting():
+    """Her istekte aktif ayarı kontrol et ve güncelle"""
+    if current_user.is_authenticated:
+        global_setting = GlobalSetting.query.filter_by(key='active_setting').first()
+        if global_setting:
+            session['selected_setting'] = global_setting.value

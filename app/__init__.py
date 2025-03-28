@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
+from app.utils.helpers import convert_utc_to_local
 
 # Veritabanı nesnesi oluştur
 db = SQLAlchemy()
@@ -53,6 +54,13 @@ def create_app(config_name='default'):
             'Region': database.Region,
             'Operation': database.Operation
         }
+
+    @app.template_filter('localtime')
+    def localtime_filter(value):
+        """UTC zamanını yerel zamana çeviren şablon filtresi"""
+        if hasattr(g, 'user_timezone'):
+            return convert_utc_to_local(value, g.user_timezone)
+        return value
 
     with app.app_context():
         db.create_all()

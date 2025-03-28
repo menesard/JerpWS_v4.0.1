@@ -115,13 +115,15 @@
                             <label class="form-label mb-2">Bölge <span class="text-danger">*</span></label>
                             <div class="region-grid d-flex flex-wrap gap-2">
                                 {% for region in regions %}
-                                    <div class="region-button-container">
-                                        <input type="radio" class="btn-check region-radio" name="region" id="region_{{ region.name }}" value="{{ region.name }}" {% if loop.first %}checked{% endif %} required>
-                                        <label class="region-button desktop-region-button" for="region_{{ region.name }}">
-                                            <i class="fas {% if region.name == 'table' %}fa-table{% elif region.name == 'polish' %}fa-brush{% elif region.name == 'melting' %}fa-fire{% elif region.name == 'saw' %}fa-cut{% elif region.name == 'acid' %}fa-flask{% else %}fa-box{% endif %}"></i>
-                                            <span>{{ region.name_tr }}</span>
-                                        </label>
-                                    </div>
+                                    {% if not current_user.role == 'staff' or (region.name != 'masa' and region.name != 'table' and region.name != 'yer') %}
+                                        <div class="region-button-container">
+                                            <input type="radio" class="btn-check region-radio" name="region" id="region_{{ region.name }}" value="{{ region.name }}" {% if loop.first %}checked{% endif %} required>
+                                            <label class="region-button desktop-region-button" for="region_{{ region.name }}">
+                                                <i class="fas {% if region.name == 'table' %}fa-table{% elif region.name == 'polish' %}fa-brush{% elif region.name == 'melting' %}fa-fire{% elif region.name == 'saw' %}fa-cut{% elif region.name == 'acid' %}fa-flask{% else %}fa-box{% endif %}"></i>
+                                                <span>{{ region.name_tr }}</span>
+                                            </label>
+                                        </div>
+                                    {% endif %}
                                 {% endfor %}
                             </div>
                         </div>
@@ -220,14 +222,13 @@
 @media (min-width: 769px) {
     .desktop-region-button {
         display: flex;
-        flex-direction: row !important;
+        flex-direction: column !important;
         align-items: center;
-        justify-content: flex-start;
-        width: auto;
-        min-width: 120px;
-        height: 40px;
-        padding: 0 15px;
-        border-radius: 6px;
+        justify-content: center;
+        width: 120px;
+        height: 120px;
+        padding: 15px;
+        border-radius: 8px;
         background-color: #f8f9fa;
         border: 1px solid #dee2e6;
         cursor: pointer;
@@ -236,15 +237,22 @@
     }
 
     .desktop-region-button i {
-        font-size: 1rem;
-        margin-right: 8px !important;
-        margin-bottom: 0 !important;
+        font-size: 2rem;
+        margin-bottom: 10px !important;
     }
 
     .btn-check:checked + .desktop-region-button {
         background-color: #0d6efd;
         border-color: #0d6efd;
         color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .region-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 15px;
     }
 
     /* İşlem tipi butonları büyüt ve yüksekliği ayarla */
@@ -299,7 +307,7 @@
     .region-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        gap: 15px;
     }
 
     .region-button {
@@ -308,18 +316,19 @@
         align-items: center;
         justify-content: center;
         width: 100%;
-        height: 80px;
+        aspect-ratio: 1;
         border-radius: 8px;
         background-color: #f8f9fa;
         border: 2px solid #dee2e6;
         cursor: pointer;
         transition: all 0.3s;
         font-size: 1rem;
+        padding: 15px;
     }
 
     .region-button i {
-        font-size: 1.5rem;
-        margin-bottom: 5px;
+        font-size: 2rem;
+        margin-bottom: 10px;
     }
 
     .btn-check:checked + .region-button {
@@ -343,6 +352,55 @@
     .btn-lg {
         padding: 0.75rem 1rem;
         font-size: 1.25rem;
+    }
+}
+
+/* Mobil tablo görünümü için CSS düzeltmeleri */
+@media screen and (max-width: 768px) {
+    .table-mobile {
+        border: 0;
+    }
+
+    .table-mobile thead {
+        display: none;
+    }
+
+    .table-mobile tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        background-color: #fff;
+    }
+
+    .table-mobile td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        text-align: right;
+        border-bottom: 1px solid #dee2e6;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+    }
+
+    .table-mobile td:last-child {
+        border-bottom: 0;
+    }
+
+    .table-mobile td::before {
+        content: attr(data-label);
+        float: left;
+        font-weight: bold;
+        text-align: left;
+        padding-right: 10px;
+    }
+
+    /* Tablo hücrelerindeki içeriğin düzgün görünmesi için */
+    .table-mobile td > * {
+        max-width: 50%;
+        word-wrap: break-word;
     }
 }
 </style>
@@ -655,6 +713,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 notification.remove();
             }, 300);
         }, duration);
+    }
+
+    // Region select kontrolü
+    if (operationForm) {
+        const regionSelect = document.getElementById('region');
+        const userRole = '{{ current_user.role }}';
+        
+        operationForm.addEventListener('submit', function(e) {
+            const selectedRegion = regionSelect.value;
+            if (userRole === 'staff' && (selectedRegion === 'masa' || selectedRegion === 'table' || selectedRegion === 'yer')) {
+                e.preventDefault();
+                alert('Bu bölgeyi kullanma yetkiniz yok!');
+                return false;
+            }
+        });
     }
 });
 </script>

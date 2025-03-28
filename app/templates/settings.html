@@ -79,8 +79,8 @@
         <div class="card shadow h-100">
             <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-weight me-2"></i>Terazi Ayarları</h5>
-                <span class="badge {% if scale_connected %}bg-success{% else %}bg-warning{% endif %}">
-                    {{ 'Bağlı' if scale_connected else 'Simülasyon' }}
+                <span class="badge {% if scale_connected %}bg-success{% else %}bg-danger{% endif %}">
+                    {{ 'Bağlı' if scale_connected else 'Bağlı Değil' }}
                 </span>
             </div>
             <div class="card-body">
@@ -95,26 +95,6 @@
                         </div>
                         <div class="form-text">
                             Terazinin bağlı olduğu port (örn. COM5, /dev/ttyUSB0)
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="simulation_mode" name="simulation_mode"
-                                   {% if scale_simulation %}checked{% endif %}>
-                            <label class="form-check-label" for="simulation_mode">
-                                Simülasyon Modu
-                            </label>
-                        </div>
-                        <div class="form-text">
-                            Gerçek terazi olmadığında rastgele değerler üretir
-                        </div>
-                    </div>
-
-                    <div class="alert {% if scale_connected %}alert-success{% else %}alert-warning{% endif %} d-flex align-items-center">
-                        <i class="fas {% if scale_connected %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %} me-2"></i>
-                        <div>
-                            {{ 'Terazi bağlantısı aktif' if scale_connected else 'Terazi bağlantısı yok, simülasyon modu aktif' }}
                         </div>
                     </div>
 
@@ -169,8 +149,8 @@
 
                                     <dt class="col-sm-5">Terazi Durumu:</dt>
                                     <dd class="col-sm-7">
-                                        <span class="badge {% if scale_connected %}bg-success{% else %}bg-warning{% endif %}">
-                                            {{ 'Bağlı' if scale_connected else 'Simülasyon' }}
+                                        <span class="badge {% if scale_connected %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ 'Bağlı' if scale_connected else 'Bağlı Değil' }}
                                         </span>
                                     </dd>
 

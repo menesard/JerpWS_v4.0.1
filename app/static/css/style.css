@@ -621,3 +621,46 @@ th.sortable.desc i:before {
     width: 3rem;
     height: 3rem;
 }
+
+/* Ayar seçim stilleri */
+.setting-selector {
+    min-width: 150px;
+}
+
+.setting-select {
+    min-width: 80px;
+    background-color: #343a40;
+    color: #fff;
+    border: 1px solid #495057;
+}
+
+.setting-select option {
+    background-color: #343a40;
+    color: #fff;
+}
+
+.setting-select:focus {
+    background-color: #343a40;
+    color: #fff;
+    border-color: #6c757d;
+    box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.25);
+}
+
+/* Mobil menüdeki ayar seçim stilleri */
+#mobileMenuModal .setting-select {
+    background-color: #fff;
+    color: #212529;
+    border: 1px solid #ced4da;
+}
+
+#mobileMenuModal .setting-select option {
+    background-color: #fff;
+    color: #212529;
+}
+
+#mobileMenuModal .setting-select:focus {
+    background-color: #fff;
+    color: #212529;
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}

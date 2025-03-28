@@ -2,6 +2,8 @@ from flask_login import UserMixin
 
 from app import db
 from datetime import datetime, UTC
+from app.utils.helpers import convert_utc_to_local
+from flask import g
 
 # İşlem türleri için sabitler
 OPERATION_ADD = 'ADD'
@@ -14,9 +16,23 @@ class Setting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(10), unique=True, nullable=False)
     purity_per_thousand = db.Column(db.Integer, nullable=False, default=916)  # Varsayılan değer 22 ayar için
+    active_setting = db.Column(db.Boolean, default=False)  # Aktif ayar olup olmadığını belirten alan
 
     def __repr__(self):
         return f"<Setting {self.name}>"
+
+
+class GlobalSetting(db.Model):
+    __tablename__ = 'global_settings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.String(255), nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    def __repr__(self):
+        return f"<GlobalSetting {self.key}>"
 
 
 class Region(db.Model):
@@ -70,6 +86,15 @@ class User(db.Model, UserMixin):
     # İlişkiler
     created_by = db.relationship('User', remote_side=[id], backref=db.backref('created_users', lazy='dynamic'))
 
+    def can_access_region(self, region_name):
+        """Kullanıcının belirli bir bölgeye erişim yetkisi olup olmadığını kontrol eder"""
+        if self.is_admin:
+            return True
+        if self.role == 'staff':
+            # Görevliler masa ve yer bölgelerine erişemez
+            return region_name not in ['masa', 'table', 'yer']
+        return True
+
     def has_role(self, role):
         if self.is_admin:
             return True
@@ -77,8 +102,8 @@ class User(db.Model, UserMixin):
             return True
         if role == 'staff' and (self.role == 'manager' or self.role == 'staff'):
             return True
-        # Staff should only have access to operations
         return False
+
 class Customer(db.Model):
     __tablename__ = 'customers'
 
@@ -311,3 +336,17 @@ class DailyVaultDetail(db.Model):
 
     # İlişkiler
     setting = db.relationship('Setting')
+
+class BaseModel:
+    def to_dict(self):
+        """Model verilerini sözlüğe dönüştürür"""
+        data = {}
+        for column in self.__table__.columns:
+            value = getattr(self, column.name)
+            # Tarih alanlarını dönüştür
+            if isinstance(value, datetime):
+                # g.user_timezone varsa kullan, yoksa UTC kullan
+                timezone_str = g.user_timezone if hasattr(g, 'user_timezone') else 'UTC'
+                value = convert_utc_to_local(value, timezone_str)
+            data[column.name] = value
+        return data

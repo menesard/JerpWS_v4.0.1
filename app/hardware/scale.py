@@ -67,7 +67,6 @@ class Scale:
         self.port = port or os.environ.get('SCALE_PORT', get_default_port())
         self.baudrate = baudrate
         self.timeout = timeout
-        self.simulation_mode = simulation_mode
         self.ser = None
         self.last_weight = 0.0
         self.is_connected = False
@@ -78,19 +77,14 @@ class Scale:
         if available_ports:
             logger.info("Kullanılabilir portlar: %s", available_ports)
 
-        if not simulation_mode:
-            try:
-                self.ser = serial.Serial(self.port, baudrate, timeout=timeout)
-                time.sleep(2)  # Bağlantının kurulması için bekle
-                self.is_connected = True
-                logger.info("Terazi bağlantısı kuruldu: %s", self.port)
-            except Exception as e:
-                logger.error("Terazi bağlantı hatası: %s", str(e))
-                self.is_connected = False
-                self.simulation_mode = True  # Otomatik simülasyon moduna geç
-
-        if self.simulation_mode:
-            logger.info("Terazi simülasyon modunda çalışıyor")
+        try:
+            self.ser = serial.Serial(self.port, baudrate, timeout=timeout)
+            time.sleep(2)  # Bağlantının kurulması için bekle
+            self.is_connected = True
+            logger.info("Terazi bağlantısı kuruldu: %s", self.port)
+        except Exception as e:
+            logger.error("Terazi bağlantı hatası: %s", str(e))
+            self.is_connected = False
 
     def _send_command(self, command):
         """Teraziye komut gönder"""
@@ -114,13 +108,6 @@ class Scale:
     def get_weight(self):
         """Teraziden ağırlık bilgisini al"""
         with self.lock:
-            if self.simulation_mode:
-                # Simülasyon modu: son ağırlığa yakın rastgele bir değer üret
-                min_val = max(0, self.last_weight - 5)
-                max_val = self.last_weight + 5
-                self.last_weight = round(random.uniform(min_val, max_val), 2)
-                return self.last_weight, True
-
             if self.is_connected and self.ser:
                 response = self._read_response()
                 if response:
@@ -129,8 +116,8 @@ class Scale:
                         self.last_weight = weight
                         return weight, True
 
-            # Bağlantı yok veya veri okunamadı, son bilinen ağırlığı döndür
-            return self.last_weight, False
+            # Bağlantı yok veya veri okunamadı, 0.00 döndür
+            return 0.00, False
 
     def tare(self):
         """Teraziyi sıfırla (dara)"""

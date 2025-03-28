@@ -72,41 +72,50 @@
 
     <div class="col-lg-8 col-md-6 mb-4">
         <div class="card shadow h-100">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Gram Bakiye Bilgileri</h5>
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" 
+                 role="button" 
+                 data-bs-toggle="collapse" 
+                 data-bs-target="#gramBalanceTable" 
+                 aria-expanded="false">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Gram Bakiye Bilgileri
+                </h5>
+                <i class="fas fa-chevron-down"></i>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped mb-0 table-mobile">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Ayar</th>
-                                <th>Giriş (g)</th>
-                                <th>Çıkış (g)</th>
-                                <th>Net (g)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for setting, data in balance.items() %}
-                            <tr>
-                                <td data-label="Ayar">{{ setting }}</td>
-                                <td data-label="Giriş (g)" class="text-success">{{ "%.2f"|format(data.inputs) }}</td>
-                                <td data-label="Çıkış (g)" class="text-danger">{{ "%.2f"|format(data.outputs) }}</td>
-                                <td data-label="Net (g)" class="{{ 'text-danger fw-bold' if data.net > 0 else 'text-success fw-bold' if data.net < 0 else '' }}">
-                                    {{ "%.2f"|format(data.net) }}
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center py-3">
-                                    <div class="alert alert-info mb-0">
-                                        <i class="fas fa-info-circle me-2"></i>Henüz kayıtlı işlem bulunmamaktadır
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            <div class="collapse" id="gramBalanceTable">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0 table-mobile">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ayar</th>
+                                    <th>Giriş (g)</th>
+                                    <th>Çıkış (g)</th>
+                                    <th>Net (g)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for setting, data in balance.items() %}
+                                <tr>
+                                    <td data-label="Ayar">{{ setting }}</td>
+                                    <td data-label="Giriş (g)" class="text-success">{{ "%.2f"|format(data.inputs) }}</td>
+                                    <td data-label="Çıkış (g)" class="text-danger">{{ "%.2f"|format(data.outputs) }}</td>
+                                    <td data-label="Net (g)" class="{{ 'text-danger fw-bold' if data.net > 0 else 'text-success fw-bold' if data.net < 0 else '' }}">
+                                        {{ "%.2f"|format(data.net) }}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-3">
+                                        <div class="alert alert-info mb-0">
+                                            <i class="fas fa-info-circle me-2"></i>Henüz kayıtlı işlem bulunmamaktadır
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -398,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         } else {
-document.querySelectorAll('.card .list-group-item').forEach(item => {
+            document.querySelectorAll('.card .list-group-item').forEach(item => {
                 const content = item.querySelector('.d-flex');
                 if (content) {
                     content.classList.add('justify-content-between');
@@ -426,6 +435,20 @@ document.querySelectorAll('.card .list-group-item').forEach(item => {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
     }
+
+    // Gram bakiye tablosu collapse işlevselliği
+    const gramBalanceTable = document.getElementById('gramBalanceTable');
+    const chevronIcon = gramBalanceTable.previousElementSibling.querySelector('.fa-chevron-down');
+    
+    gramBalanceTable.addEventListener('show.bs.collapse', function () {
+        chevronIcon.style.transform = 'rotate(180deg)';
+        chevronIcon.style.transition = 'transform 0.3s ease';
+    });
+    
+    gramBalanceTable.addEventListener('hide.bs.collapse', function () {
+        chevronIcon.style.transform = 'rotate(0deg)';
+        chevronIcon.style.transition = 'transform 0.3s ease';
+    });
 });
 </script>
 {% endblock %}

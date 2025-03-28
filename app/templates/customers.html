@@ -72,6 +72,47 @@
     </div>
 </div>
 
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" 
+                 role="button" 
+                 data-bs-toggle="collapse" 
+                 data-bs-target="#gramBalanceTable" 
+                 aria-expanded="false">
+                <h5 class="mb-0">
+                    <i class="fas fa-balance-scale me-2"></i>Gram Bakiye Bilgileri
+                </h5>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="collapse" id="gramBalanceTable">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0 table-mobile">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ayar</th>
+                                    <th class="text-end">Toplam Gram</th>
+                                    <th class="text-end">TL Değeri</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for balance in gram_balances %}
+                                <tr>
+                                    <td data-label="Ayar">{{ balance.karat }} Ayar</td>
+                                    <td data-label="Toplam Gram" class="text-end">{{ "%.2f"|format(balance.total_grams) }} gr</td>
+                                    <td data-label="TL Değeri" class="text-end">{{ "%.2f"|format(balance.tl_value) }} ₺</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Tablo Görünümü -->
 <div class="row customer-view" id="tableView">
     <div class="col-12">
@@ -182,6 +223,20 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Gram bakiye tablosu collapse işlevselliği
+    const gramBalanceTable = document.getElementById('gramBalanceTable');
+    const chevronIcon = gramBalanceTable.previousElementSibling.querySelector('.fa-chevron-down');
+    
+    gramBalanceTable.addEventListener('show.bs.collapse', function () {
+        chevronIcon.style.transform = 'rotate(180deg)';
+        chevronIcon.style.transition = 'transform 0.3s ease';
+    });
+    
+    gramBalanceTable.addEventListener('hide.bs.collapse', function () {
+        chevronIcon.style.transform = 'rotate(0deg)';
+        chevronIcon.style.transition = 'transform 0.3s ease';
+    });
+
     // Görünüm değiştirme
     const viewButtons = document.querySelectorAll('.view-btn');
     const tableView = document.getElementById('tableView');

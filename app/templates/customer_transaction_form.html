@@ -403,14 +403,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // İşçilik yüzdesi alanını sadece belirli işlem türlerinde göster/gizle
             const laborPercentageGroup = document.getElementById('labor_percentage').closest('.col-md-4');
 
-            if (selectedType.includes('OUT')) {
-                // Çıkış işlemlerinde işçilik yüzdesini göster
+            if (selectedType.includes('PRODUCT')) {
+                // Ürün giriş ve çıkış işlemlerinde işçilik yüzdesini göster
                 laborPercentageGroup.style.display = 'block';
             } else {
-                // Giriş işlemlerinde işçiliği gizle ve sıfırla
-                if (window.innerWidth <= 768) {
-                    laborPercentageGroup.style.display = 'none';
-                }
+                // Hurda giriş ve çıkış işlemlerinde işçiliği gizle ve sıfırla
+                laborPercentageGroup.style.display = 'none';
                 laborPercentageInput.value = 0;
                 calculateLaborPureGold();
             }

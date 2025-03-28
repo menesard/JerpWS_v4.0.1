@@ -1,11 +1,13 @@
 from datetime import datetime
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from app.models.database import User, Fire, Region
 from app.models.system_manager import SystemManager
 from app.hardware.scale import ScaleManager
 from werkzeug.security import check_password_hash
+from app.utils.decorators import with_user_timezone
+from app.utils.helpers import convert_utc_to_local
 
 # Blueprint oluştur
 api_bp = Blueprint('api', __name__)
@@ -38,10 +40,12 @@ def get_weight():
     """Güncel ağırlık bilgisini döndür - JWT kimlik doğrulaması olmadan erişilebilir"""
     scale_manager = ScaleManager()
     if not scale_manager.scale:
-        scale_manager.initialize(simulation_mode=True)
+        # scale_manager.initialize(simulation_mode=True)
         scale_manager.start_monitoring()
 
     weight, is_valid = scale_manager.get_current_weight()
+    if not is_valid:
+        weight = 0.00
 
     return jsonify({
         "weight": weight,
@@ -648,3 +652,20 @@ def create_initial_transfer():
             return jsonify({'error': message}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+# Örnek bir API endpoint'i için zaman çevirisi uygulayalım
+@api_bp.route('/some_data', methods=['GET'])
+@with_user_timezone
+def get_some_data():
+    # ... existing code ...
+    
+    # Verilerdeki tarih alanlarını kullanıcının zaman dilimine çevir
+    for item in data:
+        if 'created_at' in item:
+            item['created_at'] = convert_utc_to_local(item['created_at'], g.user_timezone)
+        if 'updated_at' in item:
+            item['updated_at'] = convert_utc_to_local(item['updated_at'], g.user_timezone)
+    
+    # ... existing code ...
+    
+    return jsonify(data)
