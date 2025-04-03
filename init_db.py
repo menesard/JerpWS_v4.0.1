@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 from app import create_app, db
 from app.models.database import init_db
+from config import Config
 import os
 
-app = create_app('production')  # Production modunda başlat
+app = create_app(Config)  # Config sınıfını kullanarak başlat
 
 with app.app_context():
     # Veritabanı dizininin izinlerini kontrol et ve ayarla

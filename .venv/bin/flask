@@ -1,4 +1,4 @@
-#!/home/menes/CursorProjects/JerpWS_v3.2/.venv/bin/python3
+#!/home/menes/CursorProjects/JerpWS_V4.0.1/JerpWS_v4.0.1/.venv/bin/python3.11
 # -*- coding: utf-8 -*-
 import re
 import sys

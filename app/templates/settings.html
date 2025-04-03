@@ -165,6 +165,25 @@
         </div>
     </div>
 </div>
+
+<div class="container mt-4">
+    <h2>Ayarlar</h2>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Yedekleme</h5>
+        </div>
+        <div class="card-body">
+            <p>Manuel yedek oluşturmak için aşağıdaki butonu kullanabilirsiniz.</p>
+            <button id="createBackupBtn" class="btn btn-primary">
+                <i class="fas fa-download"></i> Yedek Al
+            </button>
+            <div id="backupStatus" class="mt-3"></div>
+        </div>
+    </div>
+    
+    <!-- Diğer ayarlar buraya gelecek -->
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -249,6 +268,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     optimizeForMobile();
     window.addEventListener('resize', optimizeForMobile);
+});
+
+document.getElementById('createBackupBtn').addEventListener('click', function() {
+    const btn = this;
+    const statusDiv = document.getElementById('backupStatus');
+    
+    // Butonu devre dışı bırak
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yedekleniyor...';
+    statusDiv.innerHTML = '';
+    
+    // API'yi çağır
+    fetch('/api/backup/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            statusDiv.innerHTML = `<div class="alert alert-danger">${data.error}<br>${data.details || ''}</div>`;
+        } else {
+            statusDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+        }
+    })
+    .catch(error => {
+        statusDiv.innerHTML = `<div class="alert alert-danger">Yedekleme sırasında bir hata oluştu: ${error}</div>`;
+    })
+    .finally(() => {
+        // Butonu tekrar aktif et
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-download"></i> Yedek Al';
+    });
 });
 </script>
 {% endblock %}

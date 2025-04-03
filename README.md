@@ -1,83 +1,89 @@
-# Kuyumcu Takip Sistemi (JerpWS v3.2)
+# JerpWS (Jewelry ERP - Workshop)
 
-Bu proje, kuyumcular için geliştirilmiş bir takip sistemidir. Müşteri yönetimi, terazi entegrasyonu ve stok takibi gibi temel özellikleri içerir.
+Modern kuyumcu atölyesi yönetim sistemi.
 
 ## Özellikler
 
-- 🔐 Güvenli kullanıcı girişi ve yetkilendirme sistemi
-- 👥 Müşteri yönetimi ve takibi
-- 💍 Ürün yönetimi ve stok takibi
-- ⚖️ Terazi entegrasyonu
-- 📊 Raporlama sistemi
-- 🔄 Veritabanı yedekleme ve geri yükleme
-- 📱 Mobil uyumlu arayüz
-
-## Gereksinimler
-
-- Python 3.8 veya üzeri
-- SQLite veritabanı
-- Seri port bağlantısı (terazi için)
+- Kullanıcı yönetimi ve yetkilendirme
+- Ürün ve stok takibi
+- Müşteri yönetimi
+- Sipariş takibi
+- Raporlama
+- HTTPS güvenliği
+- RESTful API
 
 ## Kurulum
 
-1. Projeyi klonlayın:
+1. Gerekli paketleri yükleyin:
 ```bash
-git clone https://github.com/kullaniciadi/JerpWS_v3.2.git
-cd JerpWS_v3.2
+sudo apt-get update
+sudo apt-get install python3-venv nginx
 ```
 
 2. Sanal ortam oluşturun ve aktifleştirin:
 ```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac için
-# veya
-venv\Scripts\activate  # Windows için
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-3. Gerekli paketleri yükleyin:
+3. Bağımlılıkları yükleyin:
 ```bash
 pip install -r requirements.txt
 ```
 
 4. Veritabanını oluşturun:
 ```bash
-flask db upgrade
+python init_db.py
 ```
 
-5. Uygulamayı başlatın:
+5. Admin kullanıcısı oluşturun:
 ```bash
-flask run
+python create_admin.py
 ```
 
-## Yapılandırma
-
-1. `.env` dosyasını oluşturun ve aşağıdaki değişkenleri ayarlayın:
-```
-SECRET_KEY=your-secret-key
-DATABASE_URL=sqlite:///jerp.db
-SCALE_PORT=COM5  # Terazi port ayarı
+6. SSL sertifikalarını oluşturun:
+```bash
+mkdir ssl
+openssl req -x509 -newkey rsa:4096 -nodes -out ssl/cert.pem -keyout ssl/key.pem -days 365
 ```
 
-2. Terazi ayarlarını yapılandırın:
-- Terazinin bağlı olduğu port numarasını ayarlayın
-- Terazi bağlantı hızını (baudrate) ayarlayın
+7. Nginx yapılandırmasını kopyalayın:
+```bash
+sudo cp nginx.conf /etc/nginx/sites-enabled/jerpws.conf
+sudo systemctl restart nginx
+```
 
-## Kullanım
+8. Uygulamayı başlatın:
+```bash
+gunicorn -c gunicorn.conf.py wsgi:application
+```
 
-1. Tarayıcınızda `http://localhost:5000` adresine gidin
-2. Varsayılan kullanıcı bilgileri:
-   - Kullanıcı adı: admin
-   - Şifre: admin123
+## Dizin Yapısı
+
+```
+.
+├── app/                # Ana uygulama kodu
+├── instance/          # Veritabanı ve geçici dosyalar
+├── logs/             # Log dosyaları
+├── migrations/       # Veritabanı migrasyonları
+├── ssl/             # SSL sertifikaları
+├── .venv/           # Sanal ortam
+├── gunicorn.conf.py # Gunicorn yapılandırması
+├── nginx.conf       # Nginx yapılandırması
+├── wsgi.py          # WSGI uygulaması
+└── requirements.txt # Bağımlılıklar
+```
 
 ## Güvenlik
 
-- İlk girişten sonra varsayılan şifreyi değiştirmeniz önerilir
-- Düzenli olarak veritabanı yedeği alın
-- Güvenlik güncellemelerini takip edin
+- HTTPS üzerinden güvenli iletişim
+- JWT tabanlı kimlik doğrulama
+- Rol tabanlı yetkilendirme
+- Güvenli şifre hashleme
 
 ## Lisans
 
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+Copyright (c) 2025 ARD INC. Tüm hakları saklıdır.
 
 ## İletişim
 

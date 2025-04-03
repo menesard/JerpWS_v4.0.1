@@ -21,6 +21,72 @@ wheels/
 *.egg
 
 # Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Database
+instance/*.db
+!instance/.gitkeep
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# SSL Certificates
+ssl/*
+!ssl/.gitkeep
+
+# Local development
+.DS_Store
+Thumbs.db
+*.log
+*.bak
+*.tmp
+*.temp
+
+# Nginx
+*.pid
+*.lock
+
+# Gunicorn
+*.pid
+*.lock
+*.sock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 venv/
 ENV/
 env/

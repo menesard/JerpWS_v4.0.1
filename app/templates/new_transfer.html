@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}Yeni Devir İşlemi - Kuyumcu Takip Sistemi{% endblock %}
+{% block title %}Yeni Devir Oluştur{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col">
         <div class="d-flex justify-content-between align-items-center flex-wrap">
             <h2 class="border-bottom pb-2 mb-0">
-                <i class="fas fa-plus-circle me-2"></i>Yeni Devir İşlemi
+                <i class="fas fa-exchange-alt me-2"></i>Yeni Devir Oluştur
             </h2>
             <div class="mt-2 mt-md-0">
                 <a href="{{ url_for('main.transfers') }}" class="btn btn-outline-secondary">
@@ -18,131 +18,229 @@
     </div>
 </div>
 
-{% if not transfer_data.last_transfer and transfer_data.transfer_amount <= 0 %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="alert alert-warning">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle me-2 fa-2x"></i>
-                <div>
-                    <h5 class="mb-1">Henüz Başlangıç Deviri Oluşturulmamış</h5>
-                    <p class="mb-2">Sistemde hiç devir işlemi bulunmuyor. Devir işlemleri yapabilmek için önce bir başlangıç deviri oluşturmanız gerekiyor.</p>
-                    <a href="{{ url_for('main.initial_transfer') }}" class="btn btn-primary">
-                        <i class="fas fa-plus-circle me-1"></i>Başlangıç Deviri Oluştur
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
 <div class="row">
-    <!-- Devir Hesaplaması -->
-    <div class="col-lg-5 mb-4">
-        <div class="card shadow">
+    <!-- Devir Özeti -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow h-100">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Devir Hesaplaması</h5>
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Devir Özeti</h5>
             </div>
             <div class="card-body">
-                <dl class="row">
-                    <dt class="col-sm-6">Müşteri İşlemleri:</dt>
-                    <dd class="col-sm-6">{{ transfer_data.customer_total|round(4) }} g</dd>
-
-                    <dt class="col-sm-6">İşçilik Toplamı:</dt>
-                    <dd class="col-sm-6">{{ transfer_data.labor_total|round(4) }} g</dd>
-
-                    <dt class="col-sm-6">Masraf Toplamı:</dt>
-                    <dd class="col-sm-6">{{ transfer_data.expense_total|round(4) }} g</dd>
-
-                    <dt class="col-sm-6">Devir Miktarı:</dt>
-                    <dd class="col-sm-6 fw-bold h5 mb-0 text-success">{{ transfer_data.transfer_amount|round(4) }} g</dd>
-                </dl>
-
-                <hr>
-
-                <div class="row mb-3">
-                    <div class="col-6">
-                        <h6 class="text-muted mb-1">İşlem Sayısı:</h6>
-                        <p class="mb-0">{{ transfer_data.transactions|length }}</p>
-                    </div>
-                    <div class="col-6">
-                        <h6 class="text-muted mb-1">Masraf Sayısı:</h6>
-                        <p class="mb-0">{{ transfer_data.expenses|length }}</p>
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <div>
+                            <strong>Son Devir:</strong> {{ transfer_data.last_transfer.date.strftime('%d-%m-%Y %H:%M:%S.%f')[:-3] if transfer_data.last_transfer else 'İlk Devir' }}
+                        </div>
                     </div>
                 </div>
 
-                {% if transfer_data.transfer_amount <= 0 and transfer_data.last_transfer %}
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Uyarı:</strong> Devir miktarı sıfır veya negatif olduğu için devir işlemi yapılamaz.
-                </div>
-                {% elif transfer_data.transfer_amount > 0 %}
-                <form method="post">
-                    <div class="alert alert-warning">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <div>
-                                <strong>Dikkat:</strong> Bu işlem, son devirden sonraki tüm müşteri işlemlerini ve masrafları devre dahil edecektir.
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary mb-3">Son Devir Tutarı</h6>
+                                <h3 class="mb-0 text-center">{{ transfer_data.last_transfer_amount|round(4) }} g</h3>
                             </div>
                         </div>
                     </div>
 
+                    <div class="col-12">
+                        <div class="card bg-success bg-opacity-10">
+                            <div class="card-body">
+                                <h6 class="card-title text-success mb-3">Müşteri Has Girişleri (+)</h6>
+                                <h4 class="mb-0 text-center">{{ transfer_data.net_customer_pure_gold|round(4) if transfer_data.net_customer_pure_gold > 0 else '0.0000' }} g</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="card bg-danger bg-opacity-10">
+                            <div class="card-body">
+                                <h6 class="card-title text-danger mb-3">Müşteri Has Çıkışları (-)</h6>
+                                <h4 class="mb-0 text-center">{{ (transfer_data.net_customer_pure_gold * -1)|round(4) if transfer_data.net_customer_pure_gold < 0 else '0.0000' }} g</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="card bg-success bg-opacity-10">
+                            <div class="card-body">
+                                <h6 class="card-title text-success mb-3">İşçilik Has Girişleri (+)</h6>
+                                <h4 class="mb-0 text-center">{{ transfer_data.net_labor_pure_gold|round(4) if transfer_data.net_labor_pure_gold > 0 else '0.0000' }} g</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="card bg-danger bg-opacity-10">
+                            <div class="card-body">
+                                <h6 class="card-title text-danger mb-3">İşçilik Has Çıkışları (-)</h6>
+                                <h4 class="mb-0 text-center">{{ (transfer_data.net_labor_pure_gold * -1)|round(4) if transfer_data.net_labor_pure_gold < 0 else '0.0000' }} g</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="card bg-danger bg-opacity-10">
+                            <div class="card-body">
+                                <h6 class="card-title text-danger mb-3">Toplam Masraf (-)</h6>
+                                <h4 class="mb-0 text-center">{{ transfer_data.expense_total|round(4) }} g</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">Hesaplanan Devir Tutarı</h6>
+                                <h3 class="mb-0 text-center">{{ transfer_data.transfer_amount|round(4) }} g</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form action="{{ url_for('main.new_transfer') }}" method="post" class="mt-4">
+                    {{ form.hidden_tag() }}
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-success" onclick="return confirm('Devir işlemini oluşturmak istediğinize emin misiniz?')">
-                            <i class="fas fa-check-circle me-1"></i>Devir Oluştur
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-check-circle me-2"></i>Devir İşlemini Tamamla
                         </button>
                     </div>
                 </form>
-                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Devir Formülü ve Açıklama -->
-    <div class="col-lg-7 mb-4">
-        <div class="card shadow">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Devir Hesaplama Formülü</h5>
+    <!-- Devire Dahil Edilecek İşlemler -->
+    <div class="col-lg-8">
+        <!-- Müşteri İşlemleri -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Devire Dahil Edilecek Müşteri İşlemleri</h5>
+                <input type="text" class="form-control form-control-sm" id="transaction-search" placeholder="İşlem ara..." style="width: 200px;">
             </div>
-            <div class="card-body">
-                <div class="alert alert-light">
-                    <p class="text-center mb-2 fw-bold">
-                        Devir = (Müşterilere Verilenler + İşçilik) - (Müşterilerden Alınanlar + İşçilik) - Masraflar
-                    </p>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0" id="transactions-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Müşteri</th>
+                                <th>İşlem</th>
+                                <th>Ürün</th>
+                                <th>Gram</th>
+                                <th>Has Değer</th>
+                                <th>İşçilik Has</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if transfer_data.transactions %}
+                                {% for tx in transfer_data.transactions %}
+                                    <tr>
+                                        <td>{{ tx.transaction_date.strftime('%d-%m-%Y %H:%M:%S.%f')[:-3] }}</td>
+                                        <td>{{ tx.customer.name }}</td>
+                                        <td>{{ tx.get_transaction_type_tr() }}</td>
+                                        <td>{{ tx.setting.name }}</td>
+                                        <td>{{ tx.gram|round(4) }}g</td>
+                                        <td>{{ tx.pure_gold_weight|round(4) }}g</td>
+                                        <td>{{ tx.labor_pure_gold|round(4) }}g</td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="alert alert-info mb-0">
+                                            <i class="fas fa-info-circle me-2"></i>Devire dahil edilecek müşteri işlemi yok
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
+            </div>
+        </div>
 
-                <div class="mb-3">
-                    <h6 class="fw-bold">Formül Açıklaması:</h6>
-                    <ul>
-                        <li>
-                            <strong>Müşterilere Verilenler:</strong>
-                            Müşterilere verilen altınların has değerleri toplamı (ürün ve hurda çıkışları)
-                        </li>
-                        <li>
-                            <strong>Müşterilerden Alınanlar:</strong>
-                            Müşterilerden alınan altınların has değerleri toplamı (ürün ve hurda girişleri)
-                        </li>
-                        <li>
-                            <strong>İşçilik:</strong>
-                            İşlem sırasında kaydedilen işçilik yüzdelerinin has karşılıkları
-                        </li>
-                        <li>
-                            <strong>Masraflar:</strong>
-                            Kaydedilen altın masraflarının gramaj toplamı
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="alert alert-secondary">
-                    <h6 class="fw-bold mb-2">Bu Devire Dahil Edilecek Veriler:</h6>
-                    <ul class="mb-0">
-                        <li>Son devirden sonra kaydedilen tüm müşteri işlemleri (henüz devire dahil edilmemiş)</li>
-                        <li>Son devirden sonra kaydedilen tüm masraflar (henüz devire dahil edilmemiş)</li>
-                    </ul>
+        <!-- Masraflar -->
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Devire Dahil Edilecek Masraflar</h5>
+                <input type="text" class="form-control form-control-sm" id="expense-search" placeholder="Masraf ara..." style="width: 200px;">
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0" id="expenses-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Açıklama</th>
+                                <th>TL Tutarı</th>
+                                <th>Altın Tutarı</th>
+                                <th>Altın Fiyatı</th>
+                                <th>İşlemi Yapan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if transfer_data.expenses %}
+                                {% for expense in transfer_data.expenses %}
+                                    <tr>
+                                        <td>{{ expense.date.strftime('%d-%m-%Y %H:%M:%S.%f')[:-3] }}</td>
+                                        <td>{{ expense.description }}</td>
+                                        <td>{{ expense.amount_tl|round(2) }} ₺</td>
+                                        <td>{{ expense.amount_gold|round(4) }} g</td>
+                                        <td>{{ expense.gold_price|round(2) }} ₺</td>
+                                        <td>{{ expense.user.username }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <div class="alert alert-info mb-0">
+                                            <i class="fas fa-info-circle me-2"></i>Devire dahil edilecek masraf yok
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Müşteri işlemleri arama
+    const transactionSearch = document.getElementById('transaction-search');
+    const transactionsTable = document.getElementById('transactions-table');
+    if (transactionSearch && transactionsTable) {
+        transactionSearch.addEventListener('input', function() {
+            const searchText = this.value.toLowerCase();
+            const rows = transactionsTable.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchText) ? '' : 'none';
+            });
+        });
+    }
+
+    // Masraflar arama
+    const expenseSearch = document.getElementById('expense-search');
+    const expensesTable = document.getElementById('expenses-table');
+    if (expenseSearch && expensesTable) {
+        expenseSearch.addEventListener('input', function() {
+            const searchText = this.value.toLowerCase();
+            const rows = expensesTable.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchText) ? '' : 'none';
+            });
+        });
+    }
+</script>
 {% endblock %}

@@ -18,8 +18,38 @@ class Setting(db.Model):
     purity_per_thousand = db.Column(db.Integer, nullable=False, default=916)  # Varsayılan değer 22 ayar için
     active_setting = db.Column(db.Boolean, default=False)  # Aktif ayar olup olmadığını belirten alan
 
+    def __init__(self, name, purity_per_thousand=916, active_setting=False):
+        super().__init__()
+        self.name = name
+        self.purity_per_thousand = purity_per_thousand
+        self.active_setting = active_setting
+
     def __repr__(self):
         return f"<Setting {self.name}>"
+
+    @classmethod
+    def init_default_settings(cls):
+        """Varsayılan ayarları oluştur"""
+        default_settings = [
+            {'name': '8', 'purity': 333},
+            {'name': '14', 'purity': 583},
+            {'name': '18', 'purity': 750},
+            {'name': '21', 'purity': 875},
+            {'name': '22', 'purity': 916},
+            {'name': '24', 'purity': 995}
+        ]
+
+        for setting_data in default_settings:
+            existing = cls.query.filter_by(name=setting_data['name']).first()
+            if not existing:
+                new_setting = cls(
+                    name=setting_data['name'],
+                    purity_per_thousand=setting_data['purity'],
+                    active_setting=False
+                )
+                db.session.add(new_setting)
+        
+        db.session.commit()
 
 
 class GlobalSetting(db.Model):
@@ -51,7 +81,7 @@ class Operation(db.Model):
     __tablename__ = 'operations'
 
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.now(UTC), nullable=False)
+    timestamp = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
     operation_type = db.Column(db.String(20), nullable=False)
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -176,6 +206,19 @@ class CustomerTransaction(db.Model):
 
     def __repr__(self):
         return f"<CustomerTransaction {self.transaction_type} {self.gram}g>"
+
+    def get_transaction_type_tr(self):
+        """İşlem türünün Türkçe karşılığını döndürür"""
+        if self.transaction_type == TRANSACTION_PRODUCT_IN:
+            return 'Ürün Girişi'
+        elif self.transaction_type == TRANSACTION_PRODUCT_OUT:
+            return 'Ürün Çıkışı'
+        elif self.transaction_type == TRANSACTION_SCRAP_IN:
+            return 'Hurda Girişi'
+        elif self.transaction_type == TRANSACTION_SCRAP_OUT:
+            return 'Hurda Çıkışı'
+        else:
+            return self.transaction_type # Bilinmeyen tür için orijinal değeri döndür
 
 def init_db():
     """Veritabanını başlangıç verileriyle doldur"""
@@ -336,6 +379,44 @@ class DailyVaultDetail(db.Model):
 
     # İlişkiler
     setting = db.relationship('Setting')
+
+
+class Product(db.Model):
+    __tablename__ = 'products'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+
+    # İlişkiler
+    outputs = db.relationship('ProductOutput', backref='product', lazy='dynamic')
+
+    def __repr__(self):
+        return f"<Product {self.name}>"
+
+
+class ProductOutput(db.Model):
+    __tablename__ = 'product_outputs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.DateTime, default=datetime.now(UTC), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    setting_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=False)
+    weight = db.Column(db.Float, nullable=False)  # Gram cinsinden ağırlık
+    purity = db.Column(db.Integer, nullable=False)  # Ayar değeri
+    has_value = db.Column(db.Float, nullable=False)  # Has değer
+    used_in_transfer = db.Column(db.Boolean, default=False)  # Devirde kullanıldı mı
+    transfer_id = db.Column(db.Integer, db.ForeignKey('transfers.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    # İlişkiler
+    setting = db.relationship('Setting')
+    user = db.relationship('User')
+    transfer = db.relationship('Transfer', backref='product_outputs')
+
+    def __repr__(self):
+        return f"<ProductOutput {self.product.name} {self.weight}g>"
+
 
 class BaseModel:
     def to_dict(self):

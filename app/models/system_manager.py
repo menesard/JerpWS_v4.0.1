@@ -2,7 +2,7 @@ from datetime import datetime
 
 from app import db
 from app.models.database import Region, Setting, Operation, Customer, CustomerTransaction, User, Expense, Transfer, \
-    Fire, FireDetail, DailyVaultDetail, DailyVault
+    Fire, FireDetail, DailyVaultDetail, DailyVault, ProductOutput
 from app.models.database import OPERATION_ADD, OPERATION_SUBTRACT
 from app.models.database import TRANSACTION_PRODUCT_IN, TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_IN, TRANSACTION_SCRAP_OUT
 from sqlalchemy import func
@@ -348,8 +348,8 @@ class SystemManager:
                 operation_description = f"EKLEME ({target_region})"
 
             logs.append({
-                "time": op.timestamp.strftime('%d-%m-%Y %H:%M:%S'),
-                "operation_type": operation_description,  # Değiştirilmiş işlem açıklaması
+                "time": op.timestamp.strftime('%d-%m-%Y %H:%M:%S.%f')[:-3],  # Milisaniye hassasiyeti eklendi
+                "operation_type": operation_description,
                 "source_region": source_region,
                 "target_region": target_region,
                 "setting": op.setting.name,
@@ -358,6 +358,7 @@ class SystemManager:
             })
 
         return logs
+
     @staticmethod
     def add_customer(name, phone=None, email=None, address=None):
         """Yeni müşteri ekle"""
@@ -801,7 +802,7 @@ class SystemManager:
         for tx in transactions:
             transaction_data = {
                 "id": tx.id,
-                "date": tx.transaction_date.strftime('%d-%m-%Y %H:%M:%S'),
+                "date": tx.transaction_date.strftime('%d-%m-%Y %H:%M:%S.%f')[:-3],
                 "type": tx.transaction_type,
                 "type_tr": SystemManager.get_transaction_type_tr(tx.transaction_type),
                 "setting": tx.setting.name,
@@ -826,7 +827,7 @@ class SystemManager:
             # Düzenlenme bilgileri varsa ekle
             if tx.is_edited:
                 transaction_data["edited_date"] = tx.edited_date.strftime(
-                    '%d-%m-%Y %H:%M:%S') if tx.edited_date else "-"
+                    '%d-%m-%Y %H:%M:%S.%f')[:-3] if tx.edited_date else "-"
                 if tx.edited_by:
                     transaction_data["edited_by"] = tx.edited_by.username
 
@@ -985,11 +986,11 @@ class SystemManager:
                     SystemManager.remove_item(region.name, setting.name, gram, user_id)
 
         # Kasaya gerçek has değeri ekle
-        setting_22 = Setting.query.filter_by(name='22').first()
-        if setting_22:
-            # Gerçek değeri 22 ayar olarak kasaya ekle
-            gold_equivalent = float(actual_pure_gold) / (setting_22.purity_per_thousand / 1000)
-            SystemManager.add_item_safe(setting_22.name, gold_equivalent, user_id)
+        setting_24 = Setting.query.filter_by(name='24').first()
+        if setting_24:
+            # Gerçek değeri 24 ayar olarak kasaya ekle
+            gold_equivalent = float(actual_pure_gold) / (setting_24.purity_per_thousand / 1000)
+            SystemManager.add_item_safe(setting_24.name, gold_equivalent, user_id)
 
         db.session.commit()
         return True, f"Ramat işlemi başarılı. Fire: {fire_amount:.2f}g"
@@ -1030,66 +1031,51 @@ class SystemManager:
 
     @staticmethod
     def calculate_transfer():
-        """Devir hesapla - henüz devir işlemi oluşturmaz"""
-        # Son deviri bul
+        """Devir hesaplaması yap"""
+        # Son devir
         last_transfer = Transfer.query.order_by(Transfer.date.desc()).first()
+        last_transfer_amount = last_transfer.transfer_amount if last_transfer else 0
 
-        # Müşteri işlemlerini al (son devirden sonraki veya devirde henüz kullanılmamış)
-        customer_transactions_query = CustomerTransaction.query.filter_by(used_in_transfer=False)
+        # Son devirden sonraki müşteri işlemleri (kullanılmamış olanlar)
+        customer_transactions = CustomerTransaction.query.filter(
+            CustomerTransaction.used_in_transfer == False
+        ).all()
 
-        # Eğer son devir varsa, ondan sonraki işlemleri al
-        if last_transfer:
-            customer_transactions_query = customer_transactions_query.filter(
-                CustomerTransaction.transaction_date > last_transfer.date
-            )
+        # Son devirden sonraki masraflar (kullanılmamış olanlar)
+        expenses = Expense.query.filter(
+            Expense.used_in_transfer == False
+        ).all()
 
-        customer_transactions = customer_transactions_query.all()
-
-        # Müşteri işlemlerini topla
-        customer_total = 0
-        labor_total = 0
-
+        # Net müşteri has altın ve işçilik hesaplaması
+        net_customer_pure_gold = 0.0
+        net_labor_pure_gold = 0.0
         for tx in customer_transactions:
-            # Has değerler üzerinden hesapla
-            if tx.transaction_type in [TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_OUT]:
-                # Müşteriye verilen
-                customer_total += tx.pure_gold_weight
-                labor_total += tx.labor_pure_gold
-            elif tx.transaction_type in [TRANSACTION_PRODUCT_IN, TRANSACTION_SCRAP_IN]:
-                # Müşteriden alınan
-                customer_total -= tx.pure_gold_weight
-                labor_total -= tx.labor_pure_gold
+            if tx.transaction_type in [TRANSACTION_PRODUCT_IN, TRANSACTION_SCRAP_IN]:
+                # Müşteriden alınanlar deviri AZALTIR (has altın)
+                net_customer_pure_gold -= tx.pure_gold_weight if tx.pure_gold_weight else 0
+                # Müşteriden alırken ödenen işçilik deviri AZALTIR (işçilik has)
+                net_labor_pure_gold -= tx.labor_pure_gold if tx.labor_pure_gold else 0
+            elif tx.transaction_type in [TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_OUT]:
+                # Müşteriye verilenler deviri ARTIRIR (has altın)
+                net_customer_pure_gold += tx.pure_gold_weight if tx.pure_gold_weight else 0
+                # Müşteriye verirken alınan işçilik deviri ARTIRIR (işçilik has)
+                net_labor_pure_gold += tx.labor_pure_gold if tx.labor_pure_gold else 0
 
-        # Masrafları al (son devirden sonraki veya devirde henüz kullanılmamış)
-        expenses_query = Expense.query.filter_by(used_in_transfer=False)
+        # Masraf toplamı (altın cinsinden)
+        expense_total = sum(expense.amount_gold for expense in expenses if expense.amount_gold)
 
-        # Eğer son devir varsa, ondan sonraki masrafları al
-        if last_transfer:
-            expenses_query = expenses_query.filter(
-                Expense.date > last_transfer.date
-            )
-
-        expenses = expenses_query.all()
-        expense_total = sum(expense.amount_gold for expense in expenses)
-
-        # Son devir değeri
-        last_transfer_amount = 0
-        if last_transfer:
-            last_transfer_amount = last_transfer.transfer_amount
-
-        # Devir formülü güncellendi:
-        # Devir = Son Devir + (Müşterilere verilenler + İşçilik) - (Müşterilerden alınanlar + İşçilik) - Masraf
-        transfer_amount = last_transfer_amount + customer_total + labor_total - expense_total
+        # Devir formülü: Son Devir + Net Müşteri Has + Net İşçilik Has - Masraflar
+        transfer_amount = last_transfer_amount + net_customer_pure_gold + net_labor_pure_gold - expense_total
 
         return {
             'last_transfer': last_transfer,
             'last_transfer_amount': last_transfer_amount,
-            'customer_total': customer_total,
-            'labor_total': labor_total,
+            'net_customer_pure_gold': net_customer_pure_gold, # Net müşteri has altın değişimi
+            'net_labor_pure_gold': net_labor_pure_gold,    # Net işçilik has altın değişimi
             'expense_total': expense_total,
             'transfer_amount': transfer_amount,
-            'transactions': customer_transactions,
-            'expenses': expenses
+            'transactions': customer_transactions, # Detay için hala gerekli
+            'expenses': expenses               # Detay için hala gerekli
         }
 
     @staticmethod
@@ -1098,13 +1084,14 @@ class SystemManager:
         # Devir hesapla
         transfer_data = SystemManager.calculate_transfer()
 
-        if transfer_data['transfer_amount'] <= 0:
-            return False, "Devir miktarı sıfır veya negatif olamaz"
+        # Devir miktarı sıfır veya negatif olamaz kontrolü kaldırıldı, eksi devir olabilir.
+        # if transfer_data['transfer_amount'] <= 0:
+        #     return False, "Devir miktarı sıfır veya negatif olamaz"
 
-        # Devir kaydı oluştur
+        # Devir kaydı oluştur (Net değerlerle)
         transfer = Transfer(
-            customer_total=transfer_data['customer_total'],
-            labor_total=transfer_data['labor_total'],
+            customer_total=transfer_data['net_customer_pure_gold'], # Net müşteri has
+            labor_total=transfer_data['net_labor_pure_gold'],       # Net işçilik has
             expense_total=transfer_data['expense_total'],
             transfer_amount=transfer_data['transfer_amount'],
             user_id=user_id
@@ -1127,7 +1114,7 @@ class SystemManager:
         # Son devir değeri mesajı ekle
         last_transfer_msg = ""
         if transfer_data['last_transfer']:
-            last_transfer_date = transfer_data['last_transfer'].date.strftime('%d-%m-%Y')
+            last_transfer_date = transfer_data['last_transfer'].date.strftime('%d-%m-%Y %H:%M:%S') # Saat de eklendi
             last_transfer_msg = f" (Son devir: {transfer_data['last_transfer_amount']:.4f} g, {last_transfer_date})"
 
         return True, f"Devir işlemi başarıyla tamamlandı. Devir miktarı: {transfer_data['transfer_amount']:.4f} g{last_transfer_msg}"
@@ -1150,10 +1137,14 @@ class SystemManager:
         # Bu devirde kullanılan masraflar
         expenses = Expense.query.filter_by(transfer_id=transfer_id).all()
 
+        # Bu devirde kullanılan ürün çıkışları
+        product_outputs = ProductOutput.query.filter_by(transfer_id=transfer_id).all()
+
         return {
             'transfer': transfer,
             'transactions': transactions,
-            'expenses': expenses
+            'expenses': expenses,
+            'product_outputs': product_outputs
         }
 
     @staticmethod
@@ -1281,4 +1272,126 @@ class SystemManager:
 
         return query.order_by(DailyVault.date.desc()).all()
 
-    # Duplicate method removed - using the implementation from line 54
+    @staticmethod
+    def convert_setting(user_id, source_setting, target_setting, gram, notes=None):
+        """
+        Ayar dönüştürme işlemi yap
+        
+        Args:
+            user_id: İşlemi yapan kullanıcı ID'si
+            source_setting: Kaynak ayar adı
+            target_setting: Hedef ayar adı
+            gram: Dönüştürülecek gram miktarı
+            notes: İşlem notları (Şu an kullanılmıyor, gelecekte kullanılabilir)
+        """
+        # Önce gerekli kontrolleri yapalım
+        if not source_setting or not target_setting or not gram:
+            return False, "Eksik parametre."
+
+        # Ayar ID'lerini alalım
+        source_setting_id = SystemManager.get_setting_id(source_setting)
+        target_setting_id = SystemManager.get_setting_id(target_setting)
+
+        # Setting nesnelerini alalım (saflık değerleri için)
+        source_setting_obj = Setting.query.get(source_setting_id)
+        target_setting_obj = Setting.query.get(target_setting_id)
+
+        if not source_setting_obj or not target_setting_obj:
+            return False, "Geçersiz ayar nesnesi."
+        
+        # Hedef ayarın saflığı 0 olamaz
+        if target_setting_obj.purity_per_thousand <= 0:
+            return False, "Hedef ayarın saflık değeri sıfır veya negatif olamaz."
+
+        # Gramajı float'a çevirelim
+        try:
+            gram = float(gram)
+            if gram <= 0:
+                raise ValueError("Gramaj pozitif olmalı.")
+        except ValueError as e:
+            return False, f"Geçersiz gramaj: {e}"
+
+        # Kasa ID'sini alalım
+        safe_id = SystemManager.get_region_id('safe') or SystemManager.get_region_id('kasa') # 'safe' veya 'kasa' olabilir
+        if not safe_id:
+            return False, "Kasa bölgesi bulunamadı."
+
+        # Kasanın mevcut durumunu kontrol et
+        kasa_status = SystemManager.get_region_status('kasa', source_setting_obj.name)
+        current_gram_in_safe = kasa_status.get(source_setting_obj.name, 0)
+
+        # Yeterli gramaj olup olmadığını kontrol et
+        if current_gram_in_safe < gram:
+            return False, f"Kasada yeterli {source_setting_obj.name} ayar altın yok. Mevcut: {current_gram_in_safe:.2f}g, İstenen: {gram:.2f}g"
+
+        # Aynı ayar arasında dönüştürme yapılamaz
+        if source_setting_id == target_setting_id:
+            return False, "Kaynak ve hedef ayar aynı olamaz."
+
+        # Hedef gramajı hesapla
+        calculated_target_gram = gram * (source_setting_obj.purity_per_thousand / target_setting_obj.purity_per_thousand)
+
+        # İşlemleri başlatalım
+        try:
+            # 1. Kaynak ayarı kasadan çıkar
+            subtract_op = Operation(
+                operation_type=OPERATION_SUBTRACT,
+                source_region_id=safe_id,
+                setting_id=source_setting_id,
+                gram=gram,
+                user_id=user_id
+            )
+            db.session.add(subtract_op)
+
+            # 2. Hedef ayarı kasaya ekle (hesaplanan gram ile)
+            add_op = Operation(
+                operation_type=OPERATION_ADD,
+                target_region_id=safe_id,
+                setting_id=target_setting_id,
+                gram=calculated_target_gram, # Hesaplanan hedef gramaj kullanıldı
+                user_id=user_id
+            )
+            db.session.add(add_op)
+
+            db.session.commit()
+            return True, f"{gram:.2f} gram {source_setting_obj.name}, {calculated_target_gram:.2f} gram {target_setting_obj.name} ayarına başarıyla dönüştürüldü."
+
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Dönüştürme sırasında hata oluştu: {e}"
+
+    @staticmethod
+    def get_all_region_status(region_name):
+        """Belirli bir bölgedeki tüm ayarların durumunu döndürür"""
+        try:
+            region_id = SystemManager.get_region_id(region_name)
+            if not region_id:
+                return {}
+
+            # Tüm ayarları al
+            settings = Setting.query.all()
+            status = {}
+
+            for setting in settings:
+                # Her ayar için bölgedeki miktarı al
+                added = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
+                    Operation.target_region_id == region_id,
+                    Operation.setting_id == setting.id,
+                    Operation.operation_type == OPERATION_ADD
+                ).scalar()
+
+                subtracted = db.session.query(func.coalesce(func.sum(Operation.gram), 0)).filter(
+                    Operation.source_region_id == region_id,
+                    Operation.setting_id == setting.id,
+                    Operation.operation_type == OPERATION_SUBTRACT
+                ).scalar()
+
+                # Net stok miktarını hesapla
+                net_stock = float(added - subtracted)
+                status[setting.name] = net_stock
+
+            return status
+
+        except Exception as e:
+            print(f"Error in get_all_region_status: {str(e)}")
+            return {}

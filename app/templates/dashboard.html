@@ -274,29 +274,6 @@
     </div>
 </div>
 
-<div class="table-responsive">
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Bölge</th>
-                <th>Ayar</th>
-                <th>Gram</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in status %}
-                {% if not current_user.role == 'staff' or (item.region_en != 'masa' and item.region_en != 'table' and item.region_en != 'yer') %}
-                    <tr>
-                        <td data-label="Bölge">{{ item.region }}</td>
-                        <td data-label="Ayar">{{ item.setting }}</td>
-                        <td data-label="Gram">{{ item.gram }}</td>
-                    </tr>
-                {% endif %}
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
 <style>
 /* Mobil tablo görünümü için CSS düzeltmeleri */
 @media screen and (max-width: 768px) {

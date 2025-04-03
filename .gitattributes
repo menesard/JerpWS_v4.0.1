@@ -1,2 +1,40 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Python files
+*.py text diff=python
+*.pyw text diff=python
+*.pyi text diff=python
+
+# Configuration files
+*.ini text
+*.cfg text
+*.conf text
+
+# Documentation
+*.md text
+*.rst text
+*.txt text
+
+# Database files
+*.db binary
+*.sqlite3 binary
+
+# SSL certificates
+*.pem binary
+*.key binary
+*.crt binary
+
+# Log files
+*.log text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.rar binary

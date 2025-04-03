@@ -10,9 +10,11 @@ from app.utils.helpers import change_region_tr, change_operation_tr, convert_utc
 from app.models.database import TRANSACTION_PRODUCT_IN, TRANSACTION_PRODUCT_OUT, TRANSACTION_SCRAP_IN, TRANSACTION_SCRAP_OUT
 from datetime import datetime, UTC
 from app.utils.decorators import with_user_timezone
+from flask_wtf import FlaskForm
 
 # Blueprint oluştur
 main_bp = Blueprint('main', __name__)
+views_bp = Blueprint('views', __name__, template_folder='templates', static_folder='static')
 
 
 # Flask-Login için kullanıcı yükleme işlevi
@@ -1115,31 +1117,30 @@ def transfers():
 @main_bp.route('/transfers/new', methods=['GET', 'POST'])
 @login_required
 def new_transfer():
-    """Yeni devir işlemi sayfası"""
-    if not current_user.has_role('manager'):
-        flash('Bu sayfaya erişim için yönetici yetkisi gereklidir!', 'danger')
-        return redirect(url_for('main.dashboard'))
-
+    """Yeni devir oluşturma sayfası"""
+    form = FlaskForm()
     if request.method == 'POST':
-        try:
-            success, message = SystemManager.create_transfer(current_user.id)
+        if form.validate_on_submit():
+            user_id = current_user.id
+            try:
+                success, message = SystemManager.create_transfer(user_id)
+                if success:
+                    flash(message, 'success')
+                    return redirect(url_for('main.transfers'))
+                else:
+                    flash(message, 'danger')
+            except Exception as e:
+                flash(f'Hata oluştu: {str(e)}', 'danger')
+        else:
+            flash('Geçersiz form gönderimi veya CSRF token hatası.', 'danger')
 
-            if success:
-                flash(message, 'success')
-                return redirect(url_for('main.transfers'))
-            else:
-                flash(message, 'danger')
-        except Exception as e:
-            flash(f'Hata oluştu: {str(e)}', 'danger')
-
-        return redirect(url_for('main.new_transfer'))
-
-    # Devir hesapla
+    # GET isteği veya POST sonrası hata durumu için devir verisini hesapla
     transfer_data = SystemManager.calculate_transfer()
 
     return render_template(
         'new_transfer.html',
-        transfer_data=transfer_data
+        transfer_data=transfer_data,
+        form=form
     )
 
 
@@ -1281,6 +1282,52 @@ def initial_transfer():
             flash(f'Hata oluştu: {str(e)}', 'danger')
 
     return render_template('initial_transfer.html')
+
+
+@main_bp.route('/convert_setting', methods=['GET', 'POST'])
+@login_required
+def convert_setting():
+    """Ayar dönüştürme sayfası"""
+    if not current_user.has_role('manager'):
+        flash('Bu sayfaya erişim için yönetici yetkisi gereklidir!', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    if request.method == 'POST':
+        source_setting = request.form.get('source_setting')
+        target_setting = request.form.get('target_setting')
+        gram = request.form.get('gram', type=float)
+        notes = request.form.get('notes')
+
+        if not all([source_setting, target_setting, gram]):
+            flash('Lütfen tüm alanları doldurun!', 'danger')
+            return redirect(url_for('main.convert_setting'))
+
+        success, message = SystemManager.convert_setting(
+            user_id=current_user.id,
+            source_setting=source_setting,
+            target_setting=target_setting,
+            gram=gram,
+            notes=notes
+        )
+
+        if success:
+            flash(message, 'success')
+        else:
+            flash(message, 'danger')
+
+        return redirect(url_for('main.convert_setting'))
+
+    # Tüm ayarları al
+    settings = Setting.query.all()
+    
+    # Kasa bölgesindeki altın miktarlarını al
+    kasa_status = SystemManager.get_all_region_status('kasa')
+    
+    return render_template(
+        'convert_setting.html',
+        settings=settings,
+        kasa_status=kasa_status
+    )
 
 
 @main_bp.before_request

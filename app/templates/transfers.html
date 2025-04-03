@@ -59,7 +59,7 @@
                         <tbody>
                             {% for transfer in transfers %}
                             <tr>
-                                <td>{{ transfer.date.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                                <td>{{ transfer.date.strftime('%d-%m-%Y %H:%M:%S.%f')[:-3] }}</td>
                                 <td>{{ transfer.customer_total|round(4) }} g</td>
                                 <td>{{ transfer.labor_total|round(4) }} g</td>
                                 <td>{{ transfer.expense_total|round(4) }} g</td>

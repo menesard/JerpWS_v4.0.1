@@ -538,7 +538,7 @@ def get_expenses():
     for expense in expenses:
         result.append({
             'id': expense.id,
-            'date': expense.date.strftime('%d-%m-%Y %H:%M:%S'),
+            'date': expense.date.strftime('%d-%m-%Y %H:%M:%S.%f')[:-3],
             'description': expense.description,
             'amount_tl': expense.amount_tl,
             'amount_gold': expense.amount_gold,

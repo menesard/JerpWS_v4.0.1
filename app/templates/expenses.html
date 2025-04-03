@@ -156,7 +156,7 @@
                         <tbody>
                             {% for expense in expenses %}
                             <tr>
-                                <td>{{ expense.date.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                                <td>{{ expense.date.strftime('%d-%m-%Y %H:%M:%S.%f')[:-3] }}</td>
                                 <td>{{ expense.description }}</td>
                                 <td>{{ expense.amount_tl|round(2) }} ₺</td>
                                 <td>{{ expense.amount_gold|round(2) }} g</td>

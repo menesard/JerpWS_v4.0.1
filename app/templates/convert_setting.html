@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Ayar Dönüştürme - Kuyumcu Takip Sistemi{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h2 class="border-bottom pb-2 mb-0">
+                <i class="fas fa-exchange-alt me-2"></i>Ayar Dönüştürme
+            </h2>
+            <div class="mt-2 mt-md-0">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i><span class="d-none d-md-inline-block">Gösterge Paneline Dön</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Ayar Dönüştürme Formu -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Ayar Dönüştürme</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="source_setting" class="form-label">Kaynak Ayar</label>
+                        <select class="form-select" id="source_setting" name="source_setting" required>
+                            <option value="">Seçiniz...</option>
+                            {% for setting in settings %}
+                            <option value="{{ setting.name }}" data-purity="{{ setting.purity_per_thousand }}">
+                                {{ setting.name }} Ayar ({{ setting.purity_per_thousand }}‰)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="target_setting" class="form-label">Hedef Ayar</label>
+                        <select class="form-select" id="target_setting" name="target_setting" required>
+                            <option value="">Seçiniz...</option>
+                            {% for setting in settings %}
+                            <option value="{{ setting.name }}" data-purity="{{ setting.purity_per_thousand }}">
+                                {{ setting.name }} Ayar ({{ setting.purity_per_thousand }}‰)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="gram" class="form-label">Gram</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-weight-hanging"></i></span>
+                            <input type="number" step="0.01" min="0.01" class="form-control" id="gram" name="gram" required>
+                            <span class="input-group-text">g</span>
+                        </div>
+                        <div class="form-text">
+                            Dönüştürülecek altın miktarı
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notlar</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-exchange-alt me-2"></i>Dönüştür
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kasa Durumu -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-vault me-2"></i>Kasa Durumu</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ayar</th>
+                                <th>Gram</th>
+                                <th>Milyem</th>
+                                <th>Has Değer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for setting in settings %}
+                            {% if kasa_status.get(setting.name, 0) > 0 %}
+                            <tr>
+                                <td>{{ setting.name }}</td>
+                                <td>{{ "%.2f"|format(kasa_status.get(setting.name, 0)) }}</td>
+                                <td>{{ setting.purity_per_thousand }}</td>
+                                <td>{{ "%.4f"|format(kasa_status.get(setting.name, 0) * setting.purity_per_thousand / 1000) }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sourceSelect = document.getElementById('source_setting');
+    const targetSelect = document.getElementById('target_setting');
+    const gramInput = document.getElementById('gram');
+    const form = document.querySelector('form');
+
+    // Form doğrulama
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+
+    // Ayar seçimlerinde hesaplama yap
+    function calculateConversion() {
+        const sourceOption = sourceSelect.options[sourceSelect.selectedIndex];
+        const targetOption = targetSelect.options[targetSelect.selectedIndex];
+        const gram = parseFloat(gramInput.value) || 0;
+
+        if (sourceOption.value && targetOption.value && gram > 0) {
+            const sourcePurity = parseFloat(sourceOption.dataset.purity) / 1000;
+            const targetPurity = parseFloat(targetOption.dataset.purity) / 1000;
+            const pureGold = gram * sourcePurity;
+            const targetGram = pureGold / targetPurity;
+
+            // Sonucu göster
+            const resultMessage = `${gram.toFixed(2)}g ${sourceOption.value} ayar = ${targetGram.toFixed(2)}g ${targetOption.value} ayar`;
+            alert(resultMessage);
+        }
+    }
+
+    sourceSelect.addEventListener('change', calculateConversion);
+    targetSelect.addEventListener('change', calculateConversion);
+    gramInput.addEventListener('input', calculateConversion);
+});
+</script>
+{% endblock %} 
