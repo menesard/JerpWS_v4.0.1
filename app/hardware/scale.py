@@ -45,14 +45,14 @@ def process_scale_data(line):
         elif list_line[-1] == 'g':
             try:
                 weight = float(list_line[-2])
-                return weight, True
+                return round(weight, 2), True
             except (ValueError, IndexError):
                 logger.error("GRAM VERİSİ OKUNAMADI: %s", line)
                 return 0.0, False
         else:
             try:
                 weight = float(list_line[-1])
-                return weight, True
+                return round(weight, 2), True
             except (ValueError, IndexError):
                 logger.error("GRAM VERİSİ OKUNAMADI: %s", line)
                 return 0.0, False

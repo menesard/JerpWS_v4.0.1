@@ -17,9 +17,6 @@ MONTHLY_DIR = BACKUP_DIR / "monthly"
 BACKUP_ITEMS = [
     "instance/jewelry.db",  # Veritabanı
     "logs",                 # Log dosyaları
-    "app",                  # Uygulama kodu
-    "migrations",           # Veritabanı migrasyonları
-    "config.py",            # Yapılandırma dosyası
 ]
 
 def copy_with_sudo(source, dest):

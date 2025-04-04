@@ -183,7 +183,7 @@
         padding: 10px;
         margin-bottom: 5px;
         border-radius: 6px;
-        background-color: #cfe2ff !important;
+        background-color: #ebffe8 !important;
         position: relative;
     }
 
@@ -283,6 +283,95 @@
         width: 30px;
     }
 }
+
+/* Checkbox stil düzenlemeleri */
+.custom-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #0d6efd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    background-color: white;
+}
+
+.custom-checkbox:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.custom-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    color: white;
+    font-size: 14px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.custom-checkbox:hover {
+    border-color: #0b5ed7;
+    box-shadow: 0 0 0 0.2rem rgba(13,110,253,.25);
+}
+
+/* Seçili bölge stili */
+tr.table-primary.selected {
+    background-color: #e8f3ff !important;
+    border-color: #badbcc !important;
+    position: relative;
+}
+
+tr.table-primary.selected::before {
+    content: '\f058';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    left: -25px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #198754;
+    font-size: 18px;
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
+}
+
+tr.table-primary {
+    transition: padding-left 0.3s ease;
+    position: relative;
+}
+
+tr.table-primary.selected {
+    padding-left: 30px !important;
+}
+
+@media (max-width: 768px) {
+    tr.table-primary.selected::before {
+        left: 10px;
+        top: 50%;
+    }
+
+    tr.table-primary.selected {
+        padding-left: 35px !important;
+    }
+}
+
+tr.region-detail.selected {
+    background-color: #f8fff8 !important;
+    border-left-color: #badbcc !important;
+}
 </style>
 
 <script>
@@ -303,20 +392,25 @@ document.addEventListener('DOMContentLoaded', function() {
         let selectedCount = 0;
 
         regionCheckboxes.forEach(checkbox => {
+            const parentRow = checkbox.closest('tr');
+            const regionDetails = document.querySelectorAll(`.region-detail[data-region="${checkbox.value}"]`);
+            
             if (checkbox.checked) {
                 total += parseFloat(checkbox.getAttribute('data-pure-gold'));
                 selectedCount++;
 
-                // Seçilen bölgelerin detaylarını göster
-                const regionDetails = document.querySelectorAll(`.region-detail[data-region="${checkbox.value}"]`);
+                // Seçili stil ekle
+                parentRow.classList.add('selected');
                 regionDetails.forEach(detail => {
                     detail.classList.remove('d-none');
+                    detail.classList.add('selected');
                 });
             } else {
-                // Seçilmeyen bölgelerin detaylarını gizle
-                const regionDetails = document.querySelectorAll(`.region-detail[data-region="${checkbox.value}"]`);
+                // Seçili stili kaldır
+                parentRow.classList.remove('selected');
                 regionDetails.forEach(detail => {
                     detail.classList.add('d-none');
+                    detail.classList.remove('selected');
                 });
             }
         });
@@ -473,6 +567,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sayfa yüklendiğinde ve pencere boyutu değiştiğinde optimizasyonu uygula
     window.addEventListener('load', optimizeForMobile);
     window.addEventListener('resize', optimizeForMobile);
+
+    // Mevcut checkbox'ları özelleştirilmiş versiyonla değiştir
+    document.querySelectorAll('input[type="checkbox"][name="selected_regions"]').forEach(checkbox => {
+        checkbox.classList.add('custom-checkbox');
+    });
 });
 </script>
 {% endblock %}

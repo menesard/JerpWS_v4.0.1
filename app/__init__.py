@@ -22,7 +22,8 @@ jwt = JWTManager()
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=True)
 
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # Tüm rotalar için CORS'u etkinleştir
+    CORS(app, resources={r"/*": {"origins": "*"}})
     # Yapılandırma ayarlarını yükle
     app.config.from_object(config_class)
     app.config.from_pyfile('config.py', silent=True)  # Instance klasöründeki gizli config

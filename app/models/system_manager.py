@@ -74,8 +74,8 @@ class SystemManager:
                 Operation.operation_type == OPERATION_SUBTRACT
             ).scalar()
 
-            # Net stok miktarını hesapla
-            net_stock = float(added - subtracted)
+            # Net stok miktarını hesapla (2 basamak hassasiyet)
+            net_stock = round(float(added - subtracted), 2)
             return {setting_name: net_stock}
         except Exception as e:
             return {setting_name: 0}
@@ -1232,9 +1232,9 @@ class SystemManager:
 
         # Günlük kasa kaydı oluştur
         daily_vault = DailyVault(
-            expected_total=expected_data['total'],
-            actual_total=actual_total,
-            difference=difference,
+            expected_total=round(expected_data['total'], 2),
+            actual_total=round(actual_total, 2),
+            difference=round(difference, 2),
             user_id=user_id,
             notes=notes
         )
@@ -1303,25 +1303,22 @@ class SystemManager:
         if target_setting_obj.purity_per_thousand <= 0:
             return False, "Hedef ayarın saflık değeri sıfır veya negatif olamaz."
 
-        # Gramajı float'a çevirelim
+        # Kasanın mevcut durumunu kontrol et
+        kasa_status = SystemManager.get_region_status('kasa', source_setting_obj.name)
+        current_gram_in_safe = round(kasa_status.get(source_setting_obj.name, 0), 2)  # 2 basamağa yuvarla
+
+        # Gramajı float'a çevirelim ve yuvarlayalım
         try:
-            gram = float(gram)
+            gram = round(float(gram), 2)  # 2 basamağa yuvarla
             if gram <= 0:
                 raise ValueError("Gramaj pozitif olmalı.")
         except ValueError as e:
             return False, f"Geçersiz gramaj: {e}"
 
-        # Kasa ID'sini alalım
-        safe_id = SystemManager.get_region_id('safe') or SystemManager.get_region_id('kasa') # 'safe' veya 'kasa' olabilir
-        if not safe_id:
-            return False, "Kasa bölgesi bulunamadı."
-
-        # Kasanın mevcut durumunu kontrol et
-        kasa_status = SystemManager.get_region_status('kasa', source_setting_obj.name)
-        current_gram_in_safe = kasa_status.get(source_setting_obj.name, 0)
-
-        # Yeterli gramaj olup olmadığını kontrol et
-        if current_gram_in_safe < gram:
+        # Hassas karşılaştırma yap (0.01 gram tolerans)
+        if abs(current_gram_in_safe - gram) <= 0.01:  # 0.01 gram tolerans
+            gram = current_gram_in_safe  # Tam miktarı kullan
+        elif current_gram_in_safe < gram:
             return False, f"Kasada yeterli {source_setting_obj.name} ayar altın yok. Mevcut: {current_gram_in_safe:.2f}g, İstenen: {gram:.2f}g"
 
         # Aynı ayar arasında dönüştürme yapılamaz
@@ -1336,7 +1333,7 @@ class SystemManager:
             # 1. Kaynak ayarı kasadan çıkar
             subtract_op = Operation(
                 operation_type=OPERATION_SUBTRACT,
-                source_region_id=safe_id,
+                source_region_id=SystemManager.get_region_id('safe'),
                 setting_id=source_setting_id,
                 gram=gram,
                 user_id=user_id
@@ -1346,7 +1343,7 @@ class SystemManager:
             # 2. Hedef ayarı kasaya ekle (hesaplanan gram ile)
             add_op = Operation(
                 operation_type=OPERATION_ADD,
-                target_region_id=safe_id,
+                target_region_id=SystemManager.get_region_id('safe'),
                 setting_id=target_setting_id,
                 gram=calculated_target_gram, # Hesaplanan hedef gramaj kullanıldı
                 user_id=user_id
@@ -1386,8 +1383,8 @@ class SystemManager:
                     Operation.operation_type == OPERATION_SUBTRACT
                 ).scalar()
 
-                # Net stok miktarını hesapla
-                net_stock = float(added - subtracted)
+                # Net stok miktarını hesapla (2 basamak hassasiyet)
+                net_stock = round(float(added - subtracted), 2)
                 status[setting.name] = net_stock
 
             return status

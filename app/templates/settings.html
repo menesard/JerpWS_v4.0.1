@@ -279,23 +279,69 @@ document.getElementById('createBackupBtn').addEventListener('click', function() 
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yedekleniyor...';
     statusDiv.innerHTML = '';
     
+    // JWT token kontrolü
+    const jwtToken = document.cookie.split('jwt_token=')[1]?.split(';')[0] || '';
+    if (!jwtToken) {
+        statusDiv.innerHTML = `<div class="alert alert-danger">
+            <strong>Kimlik Doğrulama Hatası:</strong> Oturum bulunamadı. Lütfen tekrar giriş yapın.
+        </div>`;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-download"></i> Yedek Al';
+        return;
+    }
+    
     // API'yi çağır
     fetch('/api/backup/create', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        // HTTP durum kodunu kontrol et
+        if (response.status === 401) {
+            throw new Error('Yetkilendirme hatası: Lütfen tekrar giriş yapın');
+        } else if (response.status === 403) {
+            throw new Error('Yetki hatası: Bu işlem için yönetici yetkisi gereklidir');
+        } else if (!response.ok) {
+            throw new Error(`Sunucu hatası: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
-            statusDiv.innerHTML = `<div class="alert alert-danger">${data.error}<br>${data.details || ''}</div>`;
+            let errorMessage = data.error;
+            if (data.details) {
+                errorMessage += `<br><small class="text-muted">Detaylar: ${data.details}</small>`;
+            }
+            statusDiv.innerHTML = `<div class="alert alert-danger">
+                <strong>Hata:</strong> ${errorMessage}
+            </div>`;
         } else {
-            statusDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+            statusDiv.innerHTML = `<div class="alert alert-success">
+                <strong>Başarılı!</strong> ${data.message}
+            </div>`;
         }
     })
     .catch(error => {
-        statusDiv.innerHTML = `<div class="alert alert-danger">Yedekleme sırasında bir hata oluştu: ${error}</div>`;
+        console.error('Yedekleme hatası:', error);
+        
+        // Hata mesajını hazırla
+        let errorMessage = error.message || 'Bilinmeyen bir hata oluştu';
+        
+        // Ağ hatası kontrolü
+        if (!navigator.onLine) {
+            errorMessage = 'İnternet bağlantısı yok. Lütfen bağlantınızı kontrol edin.';
+        } else if (error instanceof TypeError && error.message === 'Failed to fetch') {
+            errorMessage = 'Sunucuya bağlanılamadı. Lütfen daha sonra tekrar deneyin.';
+        }
+        
+        statusDiv.innerHTML = `<div class="alert alert-danger">
+            <strong>Yedekleme Hatası:</strong><br>
+            ${errorMessage}<br>
+            <small class="text-muted">Hata Detayı: ${error.toString()}</small>
+        </div>`;
     })
     .finally(() => {
         // Butonu tekrar aktif et

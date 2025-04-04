@@ -60,12 +60,9 @@
                             <label for="filter-region" class="form-label">Bölge</label>
                             <select class="form-select" id="filter-region">
                                 <option value="">Tümü</option>
-                                <option value="safe">Kasa</option>
-                                <option value="table">Masa</option>
-                                <option value="polish">Cila</option>
-                                <option value="melting">Eritme</option>
-                                <option value="saw">Patlatma</option>
-                                <option value="acid">Boru</option>
+                                {% for region in regions %}
+                                <option value="{{ region.name }}">{{ region.name_tr }}</option>
+                                {% endfor %}
                             </select>
                         </div>
 
@@ -237,163 +234,209 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Filtre değişkenlerini tanımla
-    let startDate = '';
-    let endDate = '';
-    let showAdd = true;
-    let showSubtract = true;
-    let regionFilter = '';
-    let settingFilter = '';
-    let searchTerm = '';
-
-    // Tablo satırlarını al
-    const tableRows = document.querySelectorAll('#history-table tbody tr');
+    // DOM elementlerini seç
+    const table = document.getElementById('history-table');
+    const tbody = table.querySelector('tbody');
+    const originalRows = Array.from(tbody.querySelectorAll('tr[data-operation]'));
     const recordCount = document.getElementById('record-count');
-
-    // Filtre butonları
+    
+    // Filtre elementleri
+    const filterForm = document.getElementById('filterForm');
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
     const filterAddCheckbox = document.getElementById('filter-add');
     const filterSubtractCheckbox = document.getElementById('filter-subtract');
     const filterRegionSelect = document.getElementById('filter-region');
     const filterSettingSelect = document.getElementById('filter-setting');
-    const startDateInput = document.getElementById('start-date');
-    const endDateInput = document.getElementById('end-date');
+    const tableSearchInput = document.getElementById('table-search');
     const applyFilterButton = document.getElementById('apply-filter');
     const resetFilterButton = document.getElementById('filter-reset');
-    const tableSearchInput = document.getElementById('table-search');
 
-    // Filtre uygulama fonksiyonu
-    function applyFilters() {
-        // Filtre değerlerini al
-        startDate = startDateInput.value;
-        endDate = endDateInput.value;
-        showAdd = filterAddCheckbox.checked;
-        showSubtract = filterSubtractCheckbox.checked;
-        regionFilter = filterRegionSelect.value;
-        settingFilter = filterSettingSelect.value;
-        searchTerm = tableSearchInput.value.toLowerCase();
+    // Tarih ayrıştırma fonksiyonu
+    function parseDate(dateStr) {
+        if (!dateStr) return null;
+        
+        try {
+            // Format: DD-MM-YYYY HH:MM:SS
+            const [datePart, timePart] = dateStr.split(' ');
+            const [day, month, year] = datePart.split('-').map(Number);
+            const [hour, minute, second] = timePart.split(':').map(Number);
+            
+            return new Date(year, month - 1, day, hour, minute, second);
+        } catch (e) {
+            console.error('Tarih ayrıştırma hatası:', e);
+            return null;
+        }
+    }
+
+    // Filtreleme fonksiyonu
+    function filterTable() {
+        const filters = {
+            startDate: startDateInput.value ? new Date(startDateInput.value + 'T00:00:00') : null,
+            endDate: endDateInput.value ? new Date(endDateInput.value + 'T23:59:59') : null,
+            showAdd: filterAddCheckbox.checked,
+            showSubtract: filterSubtractCheckbox.checked,
+            region: filterRegionSelect.value,
+            setting: filterSettingSelect.value,
+            search: tableSearchInput.value.toLowerCase()
+        };
 
         let visibleCount = 0;
+        tbody.innerHTML = ''; // Tabloyu temizle
 
-        // Tüm satırları filtrele
-        tableRows.forEach(row => {
-            // Tablo başlığı veya boş sonuç satırını atla
-            if (!row.hasAttribute('data-operation')) return;
+        // Her satırı kontrol et
+        originalRows.forEach(row => {
+            const rowData = {
+                date: parseDate(row.cells[0].textContent),
+                operation: row.getAttribute('data-operation'),
+                source: row.getAttribute('data-source'),
+                target: row.getAttribute('data-target'),
+                setting: row.getAttribute('data-setting'),
+                content: row.textContent.toLowerCase()
+            };
 
-            const operation = row.getAttribute('data-operation');
-            const source = row.getAttribute('data-source');
-            const target = row.getAttribute('data-target');
-            const setting = row.getAttribute('data-setting');
-            const rowContent = row.textContent.toLowerCase();
-            const rowDate = row.cells[0].textContent;
+            // Filtreleme kontrolleri
+            let isVisible = true;
 
-            // İşlem tipine göre filtrele
-            const operationMatch = (operation === 'ADD' && showAdd) || (operation === 'SUBTRACT' && showSubtract);
-
-            // Bölge filtreleme
-            const regionMatch = !regionFilter || source === regionFilter || target === regionFilter;
-
-            // Ayar filtreleme
-            const settingMatch = !settingFilter || setting === settingFilter;
-
-            // Tarih filtreleme
-            let dateMatch = true;
-            if (startDate) {
-                const rowDateObj = parseDate(rowDate);
-                const startDateObj = new Date(startDate);
-                dateMatch = rowDateObj >= startDateObj;
-            }
-            if (endDate && dateMatch) {
-                const rowDateObj = parseDate(rowDate);
-                const endDateObj = new Date(endDate);
-                endDateObj.setDate(endDateObj.getDate() + 1); // Bitiş tarihini dahil et
-                dateMatch = rowDateObj < endDateObj;
+            // İşlem tipi kontrolü
+            if (rowData.operation === 'ADD') {
+                isVisible = isVisible && filters.showAdd;
+            } else if (rowData.operation === 'SUBTRACT') {
+                isVisible = isVisible && filters.showSubtract;
             }
 
-            // Arama filtreleme
-            const searchMatch = !searchTerm || rowContent.includes(searchTerm);
+            // Bölge kontrolü
+            if (filters.region) {
+                isVisible = isVisible && (rowData.source === filters.region || rowData.target === filters.region);
+            }
 
-            // Tüm filtreler eşleşiyorsa satırı göster
-            const isVisible = operationMatch && regionMatch && settingMatch && dateMatch && searchMatch;
-            row.style.display = isVisible ? '' : 'none';
+            // Ayar kontrolü
+            if (filters.setting) {
+                isVisible = isVisible && (rowData.setting === filters.setting);
+            }
 
-            if (isVisible) visibleCount++;
+            // Arama kontrolü
+            if (filters.search) {
+                isVisible = isVisible && rowData.content.includes(filters.search);
+            }
+
+            // Tarih kontrolü
+            if (filters.startDate && rowData.date) {
+                isVisible = isVisible && (rowData.date >= filters.startDate);
+            }
+            if (filters.endDate && rowData.date) {
+                isVisible = isVisible && (rowData.date <= filters.endDate);
+            }
+
+            // Görünür satırları ekle
+            if (isVisible) {
+                visibleCount++;
+                tbody.appendChild(row.cloneNode(true));
+            }
         });
 
-        // Kayıt sayısını güncelle
-        recordCount.textContent = `${visibleCount} Kayıt`;
-
-        // Eğer hiç görünür satır yoksa "Sonuç bulunamadı" mesajı göster
-        const noResultsRow = document.querySelector('.no-results-row');
-        if (visibleCount === 0 && tableRows.length > 0) {
-            if (!noResultsRow) {
-                const tbody = document.querySelector('#history-table tbody');
-                const newRow = document.createElement('tr');
-                newRow.className = 'no-results-row';
-                newRow.innerHTML = `
+        // Sonuç yoksa mesaj göster
+        if (visibleCount === 0) {
+            tbody.innerHTML = `
+                <tr class="no-results-row">
                     <td colspan="8" class="text-center py-4">
                         <div class="alert alert-info mb-0">
                             <i class="fas fa-info-circle me-2"></i>Filtreleme kriterlerine uygun işlem bulunamadı
                         </div>
                     </td>
-                `;
-                tbody.appendChild(newRow);
-            }
-        } else if (noResultsRow) {
-            noResultsRow.remove();
+                </tr>
+            `;
+        }
+
+        // Kayıt sayısını güncelle
+        recordCount.textContent = `${visibleCount} Kayıt`;
+
+        // Sıralama durumunu koru
+        if (currentSortType) {
+            sortTable(currentSortType, currentSortDirection);
+        }
+
+        // Detay butonlarını yeniden bağla
+        attachDetailHandlers();
+    }
+
+    // Detay butonlarını bağlama fonksiyonu
+    function attachDetailHandlers() {
+        const detailButtons = document.querySelectorAll('.show-details');
+        const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+
+        detailButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const row = this.closest('tr');
+                if (row) {
+                    document.getElementById('detail-time').textContent = row.cells[0].textContent;
+                    document.getElementById('detail-operation').textContent = row.cells[1].textContent;
+                    document.getElementById('detail-source').textContent = row.cells[2].textContent;
+                    document.getElementById('detail-target').textContent = row.cells[3].textContent;
+                    document.getElementById('detail-setting').textContent = row.cells[4].textContent;
+                    document.getElementById('detail-gram').textContent = row.cells[5].textContent;
+                    document.getElementById('detail-user').textContent = row.cells[6].textContent;
+                    detailModal.show();
+                }
+            });
+        });
+
+        // Mobil görünümde satır tıklama
+        if (window.innerWidth <= 768) {
+            const rows = document.querySelectorAll('tr[data-operation]');
+            rows.forEach(row => {
+                if (!row.classList.contains('no-results-row')) {
+                    row.classList.add('cursor-pointer');
+                    row.addEventListener('click', function(e) {
+                        if (!e.target.closest('button') && !e.target.closest('a')) {
+                            const cells = this.cells;
+                            document.getElementById('detail-time').textContent = cells[0].textContent;
+                            document.getElementById('detail-operation').textContent = cells[1].textContent;
+                            document.getElementById('detail-source').textContent = cells[2].textContent;
+                            document.getElementById('detail-target').textContent = cells[3].textContent;
+                            document.getElementById('detail-setting').textContent = cells[4].textContent;
+                            document.getElementById('detail-gram').textContent = cells[5].textContent;
+                            document.getElementById('detail-user').textContent = cells[6].textContent;
+                            detailModal.show();
+                        }
+                    });
+                }
+            });
         }
     }
 
-    // Tarih formatını JS Date nesnesine çevir
-    function parseDate(dateStr) {
-        // Format: DD-MM-YYYY HH:MM:SS
-        const parts = dateStr.split(' ');
-        const dateParts = parts[0].split('-');
-        const timeParts = parts[1].split(':');
+    // Event listeners
+    applyFilterButton.addEventListener('click', filterTable);
+    tableSearchInput.addEventListener('input', filterTable);
+    filterAddCheckbox.addEventListener('change', filterTable);
+    filterSubtractCheckbox.addEventListener('change', filterTable);
+    filterRegionSelect.addEventListener('change', filterTable);
+    filterSettingSelect.addEventListener('change', filterTable);
+    startDateInput.addEventListener('change', filterTable);
+    endDateInput.addEventListener('change', filterTable);
+    
+    resetFilterButton.addEventListener('click', () => {
+        startDateInput.value = '';
+        endDateInput.value = '';
+        filterAddCheckbox.checked = true;
+        filterSubtractCheckbox.checked = true;
+        filterRegionSelect.value = '';
+        filterSettingSelect.value = '';
+        tableSearchInput.value = '';
+        filterTable();
+    });
 
-        return new Date(
-            parseInt(dateParts[2]), // Yıl
-            parseInt(dateParts[1]) - 1, // Ay (0-11)
-            parseInt(dateParts[0]), // Gün
-            parseInt(timeParts[0]), // Saat
-            parseInt(timeParts[1]), // Dakika
-            parseInt(timeParts[2]) // Saniye
-        );
-    }
-
-    // Filtreleri uygula
-    if (applyFilterButton) {
-        applyFilterButton.addEventListener('click', function() {
-            applyFilters();
-            // Filtre panesini otomatik kapat
-            if (window.innerWidth <= 768) {
-                const collapse = bootstrap.Collapse.getInstance(document.getElementById('filterCollapse'));
-                if (collapse) collapse.hide();
-            }
+    // Mobil görünümde filtre panelini otomatik kapat
+    if (window.innerWidth <= 768) {
+        applyFilterButton.addEventListener('click', () => {
+            const collapse = bootstrap.Collapse.getInstance(document.getElementById('filterCollapse'));
+            if (collapse) collapse.hide();
         });
     }
 
-    // Filtreleri sıfırla
-    if (resetFilterButton) {
-        resetFilterButton.addEventListener('click', function() {
-            startDateInput.value = '';
-            endDateInput.value = '';
-            filterAddCheckbox.checked = true;
-            filterSubtractCheckbox.checked = true;
-            filterRegionSelect.value = '';
-            filterSettingSelect.value = '';
-            tableSearchInput.value = '';
-
-            applyFilters();
-        });
-    }
-
-    // Arama kutusu
-    if (tableSearchInput) {
-        tableSearchInput.addEventListener('input', function() {
-            searchTerm = this.value.toLowerCase();
-            applyFilters();
-        });
-    }
+    // İlk yüklemede tüm işlemleri göster
+    attachDetailHandlers();
 
     // Yazdır butonu
     const printButton = document.getElementById('btn-print');
@@ -414,7 +457,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Excel'e aktarma fonksiyonu
     function exportToExcel() {
         // Sadece görünür satırları içeren bir dizi oluştur
-        const visibleRows = Array.from(tableRows).filter(row => row.style.display !== 'none' && !row.classList.contains('no-results-row'));
+        const visibleRows = Array.from(tbody.querySelectorAll('tr[data-operation]'))
+            .filter(row => row.style.display !== 'none' && !row.classList.contains('no-results-row'));
 
         if (visibleRows.length === 0) {
             showNotification('Dışa aktarılacak veri bulunamadı', 'warning');
@@ -452,148 +496,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.removeChild(link);
 
         showNotification('İşlem geçmişi Excel formatında indirildi', 'success');
-    }
-
-    // Sıralama butonları
-    const sortableHeaders = document.querySelectorAll('th.sortable');
-    sortableHeaders.forEach(header => {
-        header.addEventListener('click', function() {
-            const sortType = this.getAttribute('data-sort');
-            const isAscending = this.classList.contains('asc');
-
-            // Tüm sıralama sınıflarını temizle
-            sortableHeaders.forEach(h => {
-                h.classList.remove('asc', 'desc');
-                h.querySelector('i').className = 'fas fa-sort';
-            });
-
-            // Yeni sıralama yönünü belirle
-            this.classList.add(isAscending ? 'desc' : 'asc');
-            this.querySelector('i').className = isAscending ? 'fas fa-sort-down' : 'fas fa-sort-up';
-
-            // Görünür satırları al ve sırala
-            const tbody = document.querySelector('#history-table tbody');
-            const visibleRows = Array.from(tableRows).filter(row =>
-                row.style.display !== 'none' &&
-                !row.classList.contains('no-results-row')
-            );
-
-            // Sıralama işlemi
-            visibleRows.sort((a, b) => {
-                let aValue, bValue;
-
-                switch (sortType) {
-                    case 'date':
-                        aValue = parseDate(a.cells[0].textContent);
-                        bValue = parseDate(b.cells[0].textContent);
-                        return isAscending ? bValue - aValue : aValue - bValue;
-
-                    case 'source':
-                        aValue = a.cells[2].textContent.trim();
-                        bValue = b.cells[2].textContent.trim();
-                        break;
-
-                    case 'target':
-                        aValue = a.cells[3].textContent.trim();
-                        bValue = b.cells[3].textContent.trim();
-                        break;
-
-                    case 'setting':
-                        aValue = parseInt(a.cells[4].textContent.trim());
-                        bValue = parseInt(b.cells[4].textContent.trim());
-                        return isAscending ? bValue - aValue : aValue - bValue;
-
-                    case 'gram':
-                        aValue = parseFloat(a.cells[5].textContent.trim());
-                        bValue = parseFloat(b.cells[5].textContent.trim());
-                        return isAscending ? bValue - aValue : aValue - bValue;
-
-                    case 'user':
-                        aValue = a.cells[6].textContent.trim();
-                        bValue = b.cells[6].textContent.trim();
-                        break;
-
-                    default:
-                        return 0;
-                }
-
-                // Metin karşılaştırma
-                return isAscending ? bValue.localeCompare(aValue, 'tr') : aValue.localeCompare(bValue, 'tr');
-            });
-
-            // DOM'u güncelle
-            visibleRows.forEach(row => {
-                tbody.appendChild(row);
-            });
-
-            // "Sonuç yok" satırını en sona ekle
-            const noResultsRow = document.querySelector('.no-results-row');
-            if (noResultsRow) {
-                tbody.appendChild(noResultsRow);
-            }
-        });
-    });
-
-    // Detay gösterme butonları
-    const detailButtons = document.querySelectorAll('.show-details');
-    if (detailButtons.length > 0) {
-        const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
-
-        detailButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const rowId = this.getAttribute('data-row-id');
-                const row = document.querySelector(`#history-table tbody tr:nth-child(${rowId})`);
-
-                if (row) {
-                    // Modal içeriğini doldur
-                    document.getElementById('detail-time').textContent = row.cells[0].textContent;
-                    document.getElementById('detail-operation').textContent = row.cells[1].textContent;
-                    document.getElementById('detail-source').textContent = row.cells[2].textContent;
-                    document.getElementById('detail-target').textContent = row.cells[3].textContent;
-                    document.getElementById('detail-setting').textContent = row.cells[4].textContent;
-                    document.getElementById('detail-gram').textContent = row.cells[5].textContent;
-                    document.getElementById('detail-user').textContent = row.cells[6].textContent;
-
-                    // Modalı göster
-                    detailModal.show();
-                }
-            });
-        });
-    }
-
-    // Mobil cihazlarda satıra tıklama
-    if (window.innerWidth <= 768) {
-        tableRows.forEach(row => {
-            if (!row.classList.contains('no-results-row')) {
-                row.addEventListener('click', function(e) {
-                    // Eğer tıklanan buton değilse
-                    if (!e.target.closest('button') && !e.target.closest('a')) {
-                        // Detay modalını göster
-                        const detailButton = this.querySelector('.show-details');
-                        if (detailButton) {
-                            detailButton.click();
-                        } else {
-                            // Detay butonu yoksa satır verilerini modal'a manuel doldur
-                            const cells = this.cells;
-
-                            document.getElementById('detail-time').textContent = cells[0].textContent;
-                            document.getElementById('detail-operation').textContent = cells[1].textContent;
-                            document.getElementById('detail-source').textContent = cells[2].textContent;
-                            document.getElementById('detail-target').textContent = cells[3].textContent;
-                            document.getElementById('detail-setting').textContent = cells[4].textContent;
-                            document.getElementById('detail-gram').textContent = cells[5].textContent;
-                            document.getElementById('detail-user').textContent = cells[6].textContent;
-
-                            const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
-                            detailModal.show();
-                        }
-                    }
-                });
-
-                // Tıklanabilir sınıfı ekle
-                row.classList.add('cursor-pointer');
-            }
-        });
     }
 
     // Bildirim gösterme fonksiyonu

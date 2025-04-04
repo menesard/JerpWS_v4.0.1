@@ -6,4 +6,4 @@ app = application  # Gunicorn için app değişkeni
 
 # Bu satır, 'python wsgi.py' ile çalıştırıldığında kullanılır
 if __name__ == "__main__":
-    application.run()
+    application.run(debug=True, use_reloader=True)

@@ -22,55 +22,9 @@
 </div>
 
 <div class="row">
-    <!-- Beklenen Kasa Durumu -->
-    <div class="col-lg-5 mb-4">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Beklenen Kasa Durumu</h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped mb-0" id="expected-vault-table">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Ayar</th>
-                                <th>Gram</th>
-                                <th>Has Değer</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for setting_id, setting_data in expected_data.details.items() %}
-                            <tr>
-                                <td>{{ setting_data.setting.name }}</td>
-                                <td>{{ setting_data.gram|round(2) }} g</td>
-                                <td>{{ (setting_data.gram * setting_data.setting.purity_per_thousand / 1000)|round(4) }} g</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="3" class="text-center py-4">
-                                    <div class="alert alert-info mb-0">
-                                        <i class="fas fa-info-circle me-2"></i>Kasada altın bulunmuyor
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot class="table-dark">
-                            <tr>
-                                <td colspan="1" class="fw-bold text-end">Toplam:</td>
-                                <td class="fw-bold">{{ expected_data.total|round(2) }} g</td>
-                                <td>-</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Kasa Kontrol Formu -->
-    <div class="col-lg-7 mb-4">
-        <div class="card shadow">
+    <!-- İşlem Formu -->
+    <div class="col-12 mb-4">
+        <div class="card shadow h-100">
             <div class="card-header bg-info text-white">
                 <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Kasa Kontrolü</h5>
             </div>
@@ -130,6 +84,7 @@
                                 </thead>
                                 <tbody>
                                     {% for setting_id, setting_data in expected_data.details.items() %}
+                                    {% if setting_data.gram > 0 %}
                                     <tr>
                                         <td>{{ setting_data.setting.name }}</td>
                                         <td>{{ setting_data.gram|round(2) }}</td>
@@ -139,6 +94,7 @@
                                                    value="{{ setting_data.gram|round(2) }}" required>
                                         </td>
                                     </tr>
+                                    {% endif %}
                                     {% endfor %}
                                 </tbody>
                             </table>

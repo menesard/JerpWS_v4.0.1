@@ -669,3 +669,30 @@ def get_some_data():
     # ... existing code ...
     
     return jsonify(data)
+
+@api_bp.route('/backup/create', methods=['POST'])
+@jwt_required()
+def create_backup():
+    """Manuel yedek oluştur"""
+    # Kullanıcı kimliğini al
+    current_user = User.query.filter_by(username=get_jwt_identity()).first()
+    if not current_user:
+        return jsonify({'error': 'Kullanıcı bulunamadı'}), 401
+
+    # Yönetici kontrolü
+    if not current_user.has_role('manager'):
+        return jsonify({'error': 'Bu işlem için yönetici yetkisi gereklidir'}), 403
+
+    try:
+        from backup import create_backup, BACKUP_DIR
+        
+        # Yedekleme dizinlerini oluştur
+        BACKUP_DIR.mkdir(exist_ok=True)
+        (BACKUP_DIR / "daily").mkdir(exist_ok=True)
+        
+        # Yedek oluştur
+        create_backup("daily")
+        
+        return jsonify({'message': 'Yedek başarıyla oluşturuldu'}), 200
+    except Exception as e:
+        return jsonify({'error': f'Yedekleme sırasında bir hata oluştu: {str(e)}'}), 500

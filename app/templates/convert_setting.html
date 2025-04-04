@@ -61,6 +61,7 @@
                         <div class="form-text">
                             Dönüştürülecek altın miktarı
                         </div>
+                        <div id="conversion-result" class="mt-2 text-primary"></div>
                     </div>
 
                     <div class="mb-3">
@@ -98,7 +99,7 @@
                         <tbody>
                             {% for setting in settings %}
                             {% if kasa_status.get(setting.name, 0) > 0 %}
-                            <tr>
+                            <tr class="setting-row" data-setting="{{ setting.name }}" style="cursor: pointer;">
                                 <td>{{ setting.name }}</td>
                                 <td>{{ "%.2f"|format(kasa_status.get(setting.name, 0)) }}</td>
                                 <td>{{ setting.purity_per_thousand }}</td>
@@ -122,6 +123,45 @@ document.addEventListener('DOMContentLoaded', function() {
     const targetSelect = document.getElementById('target_setting');
     const gramInput = document.getElementById('gram');
     const form = document.querySelector('form');
+    const conversionResult = document.getElementById('conversion-result');
+
+    // Kasa durumu tablosundaki satırlara tıklama olayı ekle
+    document.querySelectorAll('.setting-row').forEach(row => {
+        row.addEventListener('click', function() {
+            const settingName = this.dataset.setting;
+            const gramValue = parseFloat(this.querySelector('td:nth-child(2)').textContent);
+            
+            // Kaynak ayarı seç
+            for(let option of sourceSelect.options) {
+                if(option.value === settingName) {
+                    option.selected = true;
+                    sourceSelect.dispatchEvent(new Event('change'));
+                    break;
+                }
+            }
+
+            // Gram değerini otomatik doldur
+            gramInput.value = gramValue.toFixed(2);
+            gramInput.dispatchEvent(new Event('input'));
+
+            // Görsel geri bildirim
+            this.classList.add('table-primary');
+            setTimeout(() => {
+                this.classList.remove('table-primary');
+            }, 300);
+
+            // Bildirim göster
+            showNotification(`${settingName} ayarı seçildi`, 'success', 1500);
+        });
+
+        // Hover efekti için stil ekle
+        row.addEventListener('mouseenter', function() {
+            this.classList.add('table-hover');
+        });
+        row.addEventListener('mouseleave', function() {
+            this.classList.remove('table-hover');
+        });
+    });
 
     // Form doğrulama
     form.addEventListener('submit', function(event) {
@@ -144,15 +184,50 @@ document.addEventListener('DOMContentLoaded', function() {
             const pureGold = gram * sourcePurity;
             const targetGram = pureGold / targetPurity;
 
-            // Sonucu göster
-            const resultMessage = `${gram.toFixed(2)}g ${sourceOption.value} ayar = ${targetGram.toFixed(2)}g ${targetOption.value} ayar`;
-            alert(resultMessage);
+            // Sonucu textbox altında göster
+            conversionResult.innerHTML = `<i class="fas fa-exchange-alt me-2"></i>${gram.toFixed(2)}g ${sourceOption.value} ayar = ${targetGram.toFixed(2)}g ${targetOption.value} ayar`;
+        } else {
+            conversionResult.innerHTML = '';
         }
     }
 
     sourceSelect.addEventListener('change', calculateConversion);
     targetSelect.addEventListener('change', calculateConversion);
     gramInput.addEventListener('input', calculateConversion);
+
+    // Bildirim gösterme fonksiyonu
+    function showNotification(message, type = 'info', duration = 3000) {
+        // Bildirim container'ı oluştur
+        let container = document.querySelector('.notification-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'notification-container';
+            container.style.position = 'fixed';
+            container.style.top = '20px';
+            container.style.right = '20px';
+            container.style.zIndex = '9999';
+            document.body.appendChild(container);
+        }
+
+        // Bildirim elementi oluştur
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
+        `;
+
+        // Container'a ekle
+        container.appendChild(notification);
+
+        // Belirli süre sonra otomatik kapat
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.remove();
+            }, 150);
+        }, duration);
+    }
 });
 </script>
 {% endblock %} 

@@ -12,4 +12,6 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_HTTPONLY = True
     PERMANENT_SESSION_LIFETIME = timedelta(days=1)
-    PREFERRED_URL_SCHEME = 'https' 
+    PREFERRED_URL_SCHEME = 'https'
+    DEBUG = True
+    TEMPLATES_AUTO_RELOAD = True 

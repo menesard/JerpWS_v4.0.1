@@ -29,20 +29,22 @@
                     <i class="fas fa-balance-scale"></i>
                 </a>
             </div>
-            <div class="card-body text-center">
-                <div class="mb-3">
-                    <span class="display-3 fw-bold weight-display-mobile" id="weight-display">
-                        {{ '%.2f'|format(weight) }}
-                    </span>
-                    <span class="fs-3 text-muted">g</span>
+            <div class="card-body p-0">
+                <div class="weight-display-container">
+                    <div class="weight-display-inner">
+                        <div class="weight-value">
+                            <span id="weight-display">{{ '%.2f'|format(weight) }}</span>
+                            <small>gr</small>
+                        </div>
+                        <div class="weight-status">
+                            <span id="weight-status" class="badge {% if weight_valid %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ 'Geçerli Okuma' if weight_valid else 'Son Bilinen Değer' }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <span id="weight-status" class="badge {% if weight_valid %}bg-success{% else %}bg-warning{% endif %}">
-                        {{ 'Geçerli Okuma' if weight_valid else 'Son Bilinen Değer' }}
-                    </span>
-                </div>
-                <div class="d-grid">
-                    <button type="button" id="use-scale-btn" class="btn btn-outline-primary">
+                <div class="p-3 border-top">
+                    <button type="button" id="use-scale-btn" class="btn btn-primary w-100">
                         <i class="fas fa-sync-alt me-2"></i>Terazi Değerini Kullan
                     </button>
                 </div>
@@ -220,25 +222,43 @@
 <style>
 /* Masaüstü için region butonları optimizasyonu */
 @media (min-width: 769px) {
+    .region-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 80px);
+        gap: 8px;
+        justify-content: center;
+    }
+
+    .region-button-container {
+        width: 80px;
+        height: 80px;
+    }
+
     .desktop-region-button {
         display: flex;
         flex-direction: column !important;
         align-items: center;
         justify-content: center;
-        width: 120px;
-        height: 120px;
-        padding: 15px;
-        border-radius: 8px;
+        width: 100%;
+        height: 100%;
+        padding: 8px;
+        border-radius: 6px;
         background-color: #f8f9fa;
         border: 1px solid #dee2e6;
         cursor: pointer;
         transition: all 0.3s;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
 
     .desktop-region-button i {
-        font-size: 2rem;
-        margin-bottom: 10px !important;
+        font-size: 1.5rem;
+        margin-bottom: 6px !important;
+    }
+
+    .desktop-region-button span {
+        font-size: 0.75rem;
+        text-align: center;
+        line-height: 1.2;
     }
 
     .btn-check:checked + .desktop-region-button {
@@ -247,12 +267,6 @@
         color: white;
         transform: translateY(-2px);
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    .region-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 15px;
     }
 
     /* İşlem tipi butonları büyüt ve yüksekliği ayarla */
@@ -294,20 +308,32 @@
 }
 
 @media (max-width: 768px) {
-    .weight-display-mobile {
-        font-size: 4rem;
-        cursor: pointer;
-        transition: transform 0.2s;
+    .weight-display-container {
+        padding: 0.5rem;
     }
 
-    .weight-display-mobile:active {
-        transform: scale(0.95);
+    .weight-display-inner {
+        padding: 0.5rem;
+    }
+
+    .weight-value #weight-display {
+        font-size: 1.75rem;
+    }
+
+    .weight-value small {
+        font-size: 0.9rem;
     }
 
     .region-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
+        grid-template-columns: repeat(2, 80px);
+        gap: 8px;
+        justify-content: center;
+    }
+
+    .region-button-container {
+        width: 80px;
+        height: 80px;
     }
 
     .region-button {
@@ -316,19 +342,24 @@
         align-items: center;
         justify-content: center;
         width: 100%;
-        aspect-ratio: 1;
-        border-radius: 8px;
+        height: 100%;
+        border-radius: 6px;
         background-color: #f8f9fa;
         border: 2px solid #dee2e6;
         cursor: pointer;
         transition: all 0.3s;
-        font-size: 1rem;
-        padding: 15px;
+        padding: 8px;
     }
 
     .region-button i {
-        font-size: 2rem;
-        margin-bottom: 10px;
+        font-size: 1.5rem;
+        margin-bottom: 6px;
+    }
+
+    .region-button span {
+        font-size: 0.75rem;
+        text-align: center;
+        line-height: 1.2;
     }
 
     .btn-check:checked + .region-button {
@@ -402,6 +433,60 @@
         max-width: 50%;
         word-wrap: break-word;
     }
+}
+
+/* Terazi gösterge stili */
+.weight-display-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 0.5rem;
+    text-align: center;
+}
+
+.weight-display-inner {
+    background-color: white;
+    border-radius: 6px;
+    padding: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.weight-value {
+    font-family: 'Digital-7', monospace;
+    margin-bottom: 0.15rem;
+}
+
+.weight-value #weight-display {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #2c3e50;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.1);
+    letter-spacing: 1px;
+}
+
+.weight-value small {
+    font-size: 1rem;
+    color: #6c757d;
+    margin-left: 0.25rem;
+}
+
+.weight-status {
+    margin-top: 0.15rem;
+}
+
+.weight-status .badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 50px;
+}
+
+/* Animasyon efekti */
+.weight-updated {
+    animation: pulse 0.3s ease-in-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }
 </style>
 {% endblock %}
@@ -648,8 +733,8 @@ document.addEventListener('DOMContentLoaded', function() {
     loadRecentOperations();
 
     // Düzenli aralıklarla veri güncelleme
-    const weightUpdateInterval = setInterval(updateWeight, 500);
-    const operationsUpdateInterval = setInterval(loadRecentOperations, 30000); // Her 30 saniyede bir güncelle
+    const weightUpdateInterval = setInterval(updateWeight, 300);
+    const operationsUpdateInterval = setInterval(loadRecentOperations, 30000);
 
     // Sayfa kapatıldığında interval'i temizle
     window.addEventListener('beforeunload', function() {

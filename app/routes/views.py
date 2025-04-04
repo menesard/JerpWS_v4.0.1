@@ -54,7 +54,15 @@ def login():
             # JWT token oluştur ve yanıta ekle
             access_token = create_access_token(identity=username)
             response = make_response(redirect(url_for('main.operations') if user.role == 'staff' else url_for('main.dashboard')))
-            response.set_cookie('jwt_token', access_token, httponly=False)
+            response.set_cookie(
+                'jwt_token',
+                access_token,
+                httponly=False,
+                secure=True,  # HTTPS üzerinden gönder
+                samesite='Strict',  # CSRF koruması
+                path='/',  # Tüm yollar için geçerli
+                max_age=3600  # 1 saat geçerli
+            )
 
             return response
         else:
@@ -68,7 +76,9 @@ def login():
 def logout():
     """Çıkış yap"""
     logout_user()
-    return redirect(url_for('main.login'))
+    response = make_response(redirect(url_for('main.login')))
+    response.delete_cookie('jwt_token', path='/')
+    return response
 
 
 @main_bp.route('/select_setting', methods=['GET', 'POST'])
@@ -271,6 +281,10 @@ def history():
     if 'selected_setting' not in session:
         return redirect(url_for('main.select_setting'))
 
+    # Aktif bölgeleri al
+    regions = [{'name': region.name, 'name_tr': change_region_tr(region.name)}
+               for region in Region.query.filter_by(is_active=True).all()]
+
     logs = SystemManager.get_logs(50)  # Son 50 işlem
 
     # İşlemlerin tarih alanlarını yerel zaman dilimine dönüştür
@@ -284,6 +298,7 @@ def history():
     return render_template(
         'history.html',
         logs=logs,
+        regions=regions,
         selected_setting=session['selected_setting']
     )
 
@@ -397,6 +412,14 @@ def customers():
     search = request.args.get('search', '')
     customers_list = SystemManager.get_customers(search)
 
+    # Her müşteri için has bakiye bilgisini al
+    for customer in customers_list:
+        try:
+            pure_gold_balance = SystemManager.get_customer_pure_gold_balance(customer.id)
+            customer.total_net_pure_gold = pure_gold_balance['total_net_pure_gold']
+        except Exception:
+            customer.total_net_pure_gold = 0.0
+
     return render_template(
         'customers.html',
         customers=customers_list,
@@ -435,6 +458,8 @@ def customer_detail(customer_id):
     if not customer:
         flash('Müşteri bulunamadı!', 'danger')
         return redirect(url_for('main.customers'))
+
+
 
     # Seçili ayar kontrolü
     if 'selected_setting' not in session:
@@ -1146,6 +1171,7 @@ def new_transfer():
 
 @main_bp.route('/transfers/<int:transfer_id>')
 @login_required
+@with_user_timezone
 def transfer_detail(transfer_id):
     """Devir detay sayfası"""
     transfer_details = SystemManager.get_transfer_details(transfer_id)
@@ -1154,6 +1180,27 @@ def transfer_detail(transfer_id):
         flash('Devir işlemi bulunamadı!', 'danger')
         return redirect(url_for('main.transfers'))
 
+    # Tarihleri yerel zaman dilimine dönüştür
+    transfer_details['transfer'].date = convert_utc_to_local(transfer_details['transfer'].date, g.user_timezone)
+    
+    # İşlem tarihlerini dönüştür
+    for transaction in transfer_details['transactions']:
+        if hasattr(transaction, 'timestamp'):
+            transaction.timestamp = convert_utc_to_local(transaction.timestamp, g.user_timezone)
+        if hasattr(transaction, 'created_at'):
+            transaction.created_at = convert_utc_to_local(transaction.created_at, g.user_timezone)
+        if hasattr(transaction, 'updated_at'):
+            transaction.updated_at = convert_utc_to_local(transaction.updated_at, g.user_timezone)
+
+    # Masraf tarihlerini dönüştür
+    for expense in transfer_details['expenses']:
+        if hasattr(expense, 'timestamp'):
+            expense.timestamp = convert_utc_to_local(expense.timestamp, g.user_timezone)
+        if hasattr(expense, 'created_at'):
+            expense.created_at = convert_utc_to_local(expense.created_at, g.user_timezone)
+        if hasattr(expense, 'updated_at'):
+            expense.updated_at = convert_utc_to_local(expense.updated_at, g.user_timezone)
+
     # Önceki deviri bul
     previous_transfer = None
     if transfer_id:
@@ -1161,6 +1208,10 @@ def transfer_detail(transfer_id):
         previous_transfer = Transfer.query.filter(
             Transfer.date < transfer_details['transfer'].date
         ).order_by(Transfer.date.desc()).first()
+        
+        # Önceki devirin tarihini de dönüştür
+        if previous_transfer:
+            previous_transfer.date = convert_utc_to_local(previous_transfer.date, g.user_timezone)
 
     return render_template(
         'transfer_detail.html',
@@ -1302,11 +1353,24 @@ def convert_setting():
             flash('Lütfen tüm alanları doldurun!', 'danger')
             return redirect(url_for('main.convert_setting'))
 
+        # Kasadaki miktarı kontrol et
+        kasa_status = SystemManager.get_all_region_status('kasa')
+        available_gram = round(kasa_status.get(source_setting, 0), 4)  # 4 basamağa yuvarla
+        requested_gram = round(gram, 4)  # İstenen miktarı da 4 basamağa yuvarla
+
+        # Hassas karşılaştırma yap
+        if abs(requested_gram - available_gram) <= 0.0001:  # 0.0001 gram tolerans
+            requested_gram = available_gram  # Tam miktarı kullan
+        
+        if requested_gram > available_gram:
+            flash(f'Kasada yeterli {source_setting} ayar altın yok. Mevcut: {available_gram:.4f}g, İstenen: {requested_gram:.4f}g', 'danger')
+            return redirect(url_for('main.convert_setting'))
+
         success, message = SystemManager.convert_setting(
             user_id=current_user.id,
             source_setting=source_setting,
             target_setting=target_setting,
-            gram=gram,
+            gram=requested_gram,  # Yuvarlanmış değeri kullan
             notes=notes
         )
 

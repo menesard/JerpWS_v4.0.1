@@ -2,6 +2,31 @@
 
 {% block title %}Gösterge Paneli - Kuyumcu Takip Sistemi{% endblock %}
 
+{% block styles %}
+<style>
+    @media (max-width: 768px) {
+        .weight-card {
+            order: -1;
+            margin-bottom: 1rem;
+        }
+        .weight-display-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .weight-display-mobile {
+            font-size: 1.5rem !important;
+        }
+        .weight-display-container {
+            margin-bottom: 0.5rem !important;
+        }
+        .card-body {
+            padding: 0.75rem !important;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col">
@@ -16,28 +41,30 @@
     <!-- Terazi Kartı -->
     <div class="col-lg-4 col-md-6 mb-4 weight-card">
         <div class="card shadow h-100 border-primary">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
                 <h5 class="mb-0 d-flex align-items-center">
                     <i class="fas fa-weight-hanging me-2"></i>Terazi
                 </h5>
-                <a href="{{ url_for('main.tare_scale') }}" class="btn btn-sm btn-light" title="Teraziyi Sıfırla">
-                    <i class="fas fa-balance-scale"></i>
-                </a>
+                <div class="d-flex align-items-center">
+                    <span id="weight-status" class="badge me-2 {% if weight_valid %}bg-success{% else %}bg-warning{% endif %}">
+                        {% if weight_valid %}Geçerli{% else %}Son Değer{% endif %}
+                    </span>
+                    <a href="{{ url_for('main.tare_scale') }}" class="btn btn-sm btn-light" title="Teraziyi Sıfırla">
+                        <i class="fas fa-balance-scale"></i>
+                    </a>
+                </div>
             </div>
-            <div class="card-body d-flex flex-column align-items-center justify-content-center">
-                <div class="weight-display-container mb-3 text-center">
+            <div class="card-body d-flex flex-column align-items-center justify-content-center py-2">
+                <div class="weight-display-container text-center">
                     <div class="weight-display-wrapper">
                         <span class="display-1 fw-bold weight-display-mobile" id="weight-display">
                             {{ '%.2f'|format(weight) }}
                         </span>
                         <span class="fs-2 ms-2">g</span>
                     </div>
-                    <div id="weight-status" class="badge mt-2 {% if weight_valid %}bg-success{% else %}bg-warning{% endif %}">
-                        {% if weight_valid %}Geçerli Okuma{% else %}Son Bilinen Değer{% endif %}
-                    </div>
                 </div>
-                <div class="d-grid gap-2 w-100">
-                    <a href="{{ url_for('main.operations') }}" class="btn btn-primary">
+                <div class="d-grid gap-2 w-100 mt-2">
+                    <a href="{{ url_for('main.operations') }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-exchange-alt me-2"></i>İşlem Yap
                     </a>
                 </div>
@@ -82,12 +109,9 @@
         <div class="card shadow">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-history me-2"></i>Son İşlemler</h5>
-                <div>
-                    <input type="text" class="form-control form-control-sm d-inline-block me-2 search-input" placeholder="Arama..." style="width: 150px;">
-                    <a href="{{ url_for('main.history') }}" class="btn btn-sm btn-light">
-                        <i class="fas fa-external-link-alt me-1"></i>Tüm Geçmiş
-                    </a>
-                </div>
+                <a href="{{ url_for('main.history') }}" class="btn btn-sm btn-light">
+                    <i class="fas fa-external-link-alt me-1"></i>Tüm Geçmiş
+                </a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -96,48 +120,135 @@
                             <tr>
                                 <th>Zaman</th>
                                 <th>İşlem</th>
-                                <th>Kaynak</th>
-                                <th>Hedef</th>
-                                <th>Ayar</th>
                                 <th>Gram</th>
-                                <th class="d-none d-md-table-cell">Kullanıcı</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for log in logs %}
-                            <tr>
-                                <td data-label="Zaman">{{ log.time }}</td>
+                            <tr data-log='{{ log|tojson }}' style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#logDetailsModal">
+                                <td data-label="Zaman">{{ log.time.split('.')[0] }}</td>
                                 <td data-label="İşlem">
                                     <div class="d-inline-block">
-                                        <span class="badge {% if log.operation_type == 'ADD' %}bg-success{% else %}bg-danger{% endif %}">
-                                            {{ change_operation_tr(log.operation_type) }}
+                                        <span class="badge {% if log.operation_type == 'ADD' %}bg-success{% else %}bg-primary{% endif %}">
+                                            {{ change_operation_tr(log.operation_type) }}{% if log.operation_type == 'TRANSFER' %} ({{ change_region_tr(log.source_region) }} → {{ change_region_tr(log.target_region) }}){% endif %}
                                         </span>
                                     </div>
-                                </td>
-                                <td data-label="Kaynak">
-                                    <div class="d-inline-block">{{ change_region_tr(log.source_region) }}</div>
-                                </td>
-                                <td data-label="Hedef">
-                                    <div class="d-inline-block">{{ change_region_tr(log.target_region) }}</div>
-                                </td>
-                                <td data-label="Ayar">
-                                    <div class="d-inline-block">{{ log.setting }}</div>
                                 </td>
                                 <td data-label="Gram">
                                     <div class="d-inline-block">{{ log.gram }}</div>
                                 </td>
-                                <td data-label="Kullanıcı" class="d-none d-md-table-cell">
-                                    <div class="d-inline-block">{{ log.username }}</div>
-                                </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center">Henüz işlem kaydı bulunmuyor</td>
+                                <td colspan="3" class="text-center">Henüz işlem kaydı bulunmuyor</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İşlem Detayları Modal -->
+<div class="modal fade" id="logDetailsModal" tabindex="-1" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="logDetailsModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>İşlem Detayları
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="detail-icon bg-primary text-white rounded-circle p-2">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0 text-muted">Zaman</h6>
+                                <p class="mb-0" id="modal-time"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="detail-icon bg-success text-white rounded-circle p-2">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0 text-muted">İşlem</h6>
+                                <p class="mb-0" id="modal-operation"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="detail-icon bg-warning text-dark rounded-circle p-2">
+                                    <i class="fas fa-weight-hanging"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0 text-muted">Gram</h6>
+                                <p class="mb-0" id="modal-gram"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="detail-icon bg-info text-white rounded-circle p-2">
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0 text-muted">Kaynak → Hedef</h6>
+                                <p class="mb-0">
+                                    <span id="modal-source"></span> → <span id="modal-target"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="detail-icon bg-secondary text-white rounded-circle p-2">
+                                    <i class="fas fa-cog"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0 text-muted">Ayar</h6>
+                                <p class="mb-0" id="modal-setting"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="detail-icon bg-dark text-white rounded-circle p-2">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0 text-muted">Kullanıcı</h6>
+                                <p class="mb-0" id="modal-user"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Kapat
+                </button>
             </div>
         </div>
     </div>
@@ -388,14 +499,91 @@
 
 /* Region status grid için özel stiller */
 .region-status-grid {
-    display: grid;
-    gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
     padding: 1rem;
+}
+
+.region-status-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    background-color: #fff;
+}
+
+.region-icon-container {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.region-icon {
+    font-size: 1.25rem;
+    color: #6c757d;
+}
+
+.region-details {
+    flex: 1;
+}
+
+.region-amount {
+    font-size: 1rem;
 }
 
 @media (max-width: 768px) {
     .region-status-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        padding: 0.5rem;
+    }
+    
+    .region-status-item {
+        padding: 0.5rem;
+    }
+    
+    .region-icon-container {
+        width: 35px;
+        height: 35px;
+    }
+}
+
+/* Modal detay ikonları için stil */
+.detail-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.detail-icon i {
+    font-size: 1.1rem;
+}
+
+/* Modal içeriği için stil */
+.modal-body p {
+    font-size: 1rem;
+    margin: 0;
+}
+
+.modal-body h6 {
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+/* Mobil görünüm için düzenlemeler */
+@media (max-width: 768px) {
+    .detail-icon {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .modal-body p {
+        font-size: 0.95rem;
     }
 }
 </style>
@@ -405,6 +593,33 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // İşlem ve bölge çeviri fonksiyonları
+    function change_operation_tr(operation) {
+        const operations = {
+            'ADD': 'Ekleme',
+            'REMOVE': 'Çıkarma',
+            'TRANSFER': 'Transfer',
+            'RAMAT': 'Ramat',
+            'FIRE': 'Fire'
+        };
+        return operations[operation] || operation;
+    }
+
+    function change_region_tr(region) {
+        const regions = {
+            'safe': 'Kasa',
+            'kasa': 'Kasa',
+            'table': 'Masa',
+            'masa': 'Masa',
+            'polish': 'Cila',
+            'melting': 'Eritme',
+            'saw': 'Patlatma',
+            'acid': 'Boru',
+            'yer': 'Yer'
+        };
+        return regions[region] || region;
+    }
+
     // Terazi güncelleme işlemi
     const updateWeightInterval = startWeightUpdater('weight-display', 'weight-status', 500);
 
@@ -598,6 +813,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Belirli aralıklarla güncelle (isteğe bağlı)
     setInterval(updateRegionInfo, 30000); // Her 30 saniyede bir güncelle
+
+    // İşlem detayları modal işlemleri
+    const logDetailsModal = document.getElementById('logDetailsModal');
+    if (logDetailsModal) {
+        logDetailsModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const row = button.closest('tr');
+            const logData = JSON.parse(row.dataset.log);
+
+            // Zaman formatını düzenle (salise kısmını kaldır)
+            const timeParts = logData.time.split('.');
+            const formattedTime = timeParts[0];
+
+            // Modal içeriğini doldur
+            document.getElementById('modal-time').textContent = formattedTime;
+            document.getElementById('modal-operation').textContent = change_operation_tr(logData.operation_type);
+            document.getElementById('modal-gram').textContent = logData.gram;
+            
+            // Kaynak ve hedef bölgelerini büyük harfle başlat
+            const sourceRegion = change_region_tr(logData.source_region);
+            const targetRegion = change_region_tr(logData.target_region);
+            document.getElementById('modal-source').textContent = sourceRegion;
+            document.getElementById('modal-target').textContent = targetRegion;
+            
+            document.getElementById('modal-setting').textContent = logData.setting;
+            document.getElementById('modal-user').textContent = logData.username;
+        });
+    }
 });
 </script>
 {% endblock %}

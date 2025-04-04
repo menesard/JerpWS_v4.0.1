@@ -36,133 +36,101 @@
             <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.dashboard') }}">
                 <i class="fas fa-gem me-2"></i>Kuyumcu Takip
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    {% if current_user.has_role('manager') or current_user.is_admin %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
-                            <i class="fas fa-tachometer-alt nav-icon"></i>
-                            <span class="nav-text">Gösterge</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.operations' %}active{% endif %}" href="{{ url_for('main.operations') }}">
-                            <i class="fas fa-balance-scale nav-icon"></i>
-                            <span class="nav-text">İşlemler</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.customers' %}active{% endif %}" href="{{ url_for('main.customers') }}">
-                            <i class="fas fa-users nav-icon"></i>
-                            <span class="nav-text">Müşteriler</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.stock' %}active{% endif %}" href="{{ url_for('main.stock') }}">
-                            <i class="fas fa-chart-bar nav-icon"></i>
-                            <span class="nav-text">Stok</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.daily_vault' or request.endpoint == 'main.daily_vault_history' %}active{% endif %}" href="{{ url_for('main.daily_vault') }}">
-                            <i class="fas fa-cash-register nav-icon"></i>
-                            <span class="nav-text">Günlük Kasa</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.history' %}active{% endif %}" href="{{ url_for('main.history') }}">
-                            <i class="fas fa-history nav-icon"></i>
-                            <span class="nav-text">Geçmiş</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.convert_setting' %}active{% endif %}" href="{{ url_for('main.convert_setting') }}">
-                            <i class="fas fa-exchange-alt nav-icon"></i>
-                            <span class="nav-text">Ayar Dönüştürme</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.expenses' %}active{% endif %}" href="{{ url_for('main.expenses') }}">
-                            <i class="fas fa-money-bill-wave nav-icon"></i>
-                            <span class="nav-text">Masraflar</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.transfers' or request.endpoint == 'main.new_transfer' %}active{% endif %}" href="{{ url_for('main.transfers') }}">
-                            <i class="fas fa-exchange-alt nav-icon"></i>
-                            <span class="nav-text">Devir</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.ramat' or request.endpoint == 'main.fires' %}active{% endif %}" href="{{ url_for('main.ramat') }}">
-                            <i class="fas fa-fire nav-icon"></i>
-                            <span class="nav-text">Ramat/Fire</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.regions' %}active{% endif %}" href="{{ url_for('main.manage_regions') }}">
-                            <i class="fas fa-map-marker-alt nav-icon"></i>
-                            <span class="nav-text">Bölgeler</span>
-                        </a>
-                    </li>
-                    {% if current_user.has_role('manager') %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.users' %}active{% endif %}" href="{{ url_for('main.users') }}">
-                            <i class="fas fa-user-cog nav-icon"></i>
-                            <span class="nav-text">Kullanıcılar</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if current_user.is_admin %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'main.settings' %}active{% endif %}" href="{{ url_for('main.settings') }}">
-                            <i class="fas fa-cog nav-icon"></i>
-                            <span class="nav-text">Ayarlar</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% endif %}
-                </ul>
-                <div class="navbar-nav d-flex align-items-center">
-                    {% if session.get('selected_setting') %}
-                    <div class="nav-item me-3 setting-selector">
-                        {% if current_user.is_admin or current_user.role == 'manager' %}
-                        <form action="{{ url_for('main.change_setting') }}" method="post" class="d-flex align-items-center setting-form">
-                            <div class="d-flex align-items-center">
-                                <span class="text-light me-2">Ayar:</span>
-                                <select name="setting" class="form-select form-select-sm setting-select" onchange="this.form.submit()">
-                                    {% for setting in settings %}
-                                    <option value="{{ setting.name }}" {% if session.get('selected_setting') == setting.name %}selected{% endif %}>
-                                        {{ setting.name }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </form>
-                        {% else %}
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-gem text-light me-1"></i>
-                            <span class="text-light">{{ session.get('selected_setting') }} Ayar</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user me-1"></i><span class="username-text">{{ current_user.username }}</span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ url_for('main.logout') }}"><i class="fas fa-sign-out-alt me-1"></i>Çıkış</a></li>
-                        </ul>
-                    </div>
+            <div class="d-flex align-items-center">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i><span class="username-text">{{ current_user.username }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('main.logout') }}"><i class="fas fa-sign-out-alt me-1"></i>Çıkış</a></li>
+                    </ul>
                 </div>
             </div>
         </div>
     </nav>
+
+    <!-- Masaüstü için Yan Navigasyon -->
+    {% if current_user.is_authenticated %}
+    <div class="desktop-sidebar d-none d-lg-flex">
+        <div class="sidebar-content">
+            {% if current_user.has_role('manager') or current_user.is_admin %}
+            <a href="{{ url_for('main.dashboard') }}" class="sidebar-item {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Gösterge</span>
+            </a>
+            <a href="{{ url_for('main.customers') }}" class="sidebar-item {% if request.endpoint == 'main.customers' %}active{% endif %}">
+                <i class="fas fa-users"></i>
+                <span>Müşteriler</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('main.operations') }}" class="sidebar-item {% if request.endpoint == 'main.operations' %}active{% endif %}">
+                <i class="fas fa-balance-scale"></i>
+                <span>İşlemler</span>
+            </a>
+            {% if current_user.has_role('manager') or current_user.is_admin %}
+            <a href="{{ url_for('main.stock') }}" class="sidebar-item {% if request.endpoint == 'main.stock' %}active{% endif %}">
+                <i class="fas fa-chart-bar"></i>
+                <span>Stok Durumu</span>
+            </a>
+            <a href="{{ url_for('main.daily_vault') }}" class="sidebar-item {% if request.endpoint == 'main.daily_vault' %}active{% endif %}">
+                <i class="fas fa-cash-register"></i>
+                <span>Günlük Kasa</span>
+            </a>
+            <a href="{{ url_for('main.history') }}" class="sidebar-item {% if request.endpoint == 'main.history' %}active{% endif %}">
+                <i class="fas fa-history"></i>
+                <span>Geçmiş</span>
+            </a>
+            <a href="{{ url_for('main.convert_setting') }}" class="sidebar-item {% if request.endpoint == 'main.convert_setting' %}active{% endif %}">
+                <i class="fas fa-exchange-alt"></i>
+                <span>Ayar Dönüştürme</span>
+            </a>
+            <a href="{{ url_for('main.expenses') }}" class="sidebar-item {% if request.endpoint == 'main.expenses' %}active{% endif %}">
+                <i class="fas fa-money-bill-wave"></i>
+                <span>Masraflar</span>
+            </a>
+            <a href="{{ url_for('main.transfers') }}" class="sidebar-item {% if request.endpoint == 'main.transfers' %}active{% endif %}">
+                <i class="fas fa-exchange-alt"></i>
+                <span>Devir İşlemi</span>
+            </a>
+            <a href="{{ url_for('main.ramat') }}" class="sidebar-item {% if request.endpoint == 'main.ramat' or request.endpoint == 'main.fires' %}active{% endif %}">
+                <i class="fas fa-fire"></i>
+                <span>Ramat / Fire</span>
+            </a>
+            <a href="{{ url_for('main.manage_regions') }}" class="sidebar-item {% if request.endpoint == 'main.regions' %}active{% endif %}">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>Bölge Yönetimi</span>
+            </a>
+            {% if current_user.has_role('manager') %}
+            <a href="{{ url_for('main.users') }}" class="sidebar-item {% if request.endpoint == 'main.users' %}active{% endif %}">
+                <i class="fas fa-user-cog"></i>
+                <span>Kullanıcılar</span>
+            </a>
+            {% endif %}
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('main.settings') }}" class="sidebar-item {% if request.endpoint == 'main.settings' %}active{% endif %}">
+                <i class="fas fa-cog"></i>
+                <span>Ayarlar</span>
+            </a>
+            {% endif %}
+            {% endif %}
+            <!-- Ayar Değiştirme Bölümü -->
+            <div class="sidebar-setting-section">
+                <form action="{{ url_for('main.change_setting') }}" method="post" class="d-flex align-items-center px-3">
+                    <div class="d-flex align-items-center w-100">
+                        <span class="me-2 text-muted">Ayar:</span>
+                        <select name="setting" class="form-select form-select-sm setting-select" onchange="this.form.submit()">
+                            {% for setting in settings %}
+                            <option value="{{ setting.name }}" {% if session.get('selected_setting') == setting.name %}selected{% endif %}>
+                                {{ setting.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Bottom Navigation for Mobile -->
     <div class="mobile-navbar d-lg-none">

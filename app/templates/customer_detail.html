@@ -8,6 +8,7 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap">
             <h2 class="border-bottom pb-2 mb-0">
                 <i class="fas fa-user me-2"></i>{{ customer.name }}
+                <i class="fas fa-info-circle ms-2 text-primary" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#customerInfoModal"></i>
             </h2>
             <div class="mt-2 mt-md-0">
                 <a href="{{ url_for('main.customers') }}" class="btn btn-outline-secondary me-2">
@@ -21,22 +22,26 @@
     </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card shadow h-100 customer-info-card">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Müşteri Bilgileri</h5>
+<!-- Müşteri Bilgileri Modal -->
+<div class="modal fade" id="customerInfoModal" tabindex="-1" aria-labelledby="customerInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="customerInfoModalLabel">
+                    <i class="fas fa-user-circle me-2"></i>Müşteri Bilgileri
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
-            <div class="card-body p-0">
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item">
-                        <div class="d-flex justify-content-between">
+            <div class="modal-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
                             <span class="text-muted"><i class="fas fa-user me-2"></i>Müşteri Adı:</span>
                             <span class="fw-bold">{{ customer.name }}</span>
                         </div>
-                    </li>
-                    <li class="list-group-item">
-                        <div class="d-flex justify-content-between">
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
                             <span class="text-muted"><i class="fas fa-phone me-2"></i>Telefon:</span>
                             <span>
                                 {% if customer.phone %}
@@ -46,9 +51,9 @@
                                 {% endif %}
                             </span>
                         </div>
-                    </li>
-                    <li class="list-group-item">
-                        <div class="d-flex justify-content-between">
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
                             <span class="text-muted"><i class="fas fa-envelope me-2"></i>E-posta:</span>
                             <span>
                                 {% if customer.email %}
@@ -58,65 +63,17 @@
                                 {% endif %}
                             </span>
                         </div>
-                    </li>
-                    <li class="list-group-item">
-                        <div class="d-flex justify-content-between">
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
                             <span class="text-muted"><i class="fas fa-map-marker-alt me-2"></i>Adres:</span>
                             <span class="text-end">{{ customer.address or '-' }}</span>
                         </div>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-8 col-md-6 mb-4">
-        <div class="card shadow h-100">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" 
-                 role="button" 
-                 data-bs-toggle="collapse" 
-                 data-bs-target="#gramBalanceTable" 
-                 aria-expanded="false">
-                <h5 class="mb-0">
-                    <i class="fas fa-chart-bar me-2"></i>Gram Bakiye Bilgileri
-                </h5>
-                <i class="fas fa-chevron-down"></i>
-            </div>
-            <div class="collapse" id="gramBalanceTable">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped mb-0 table-mobile">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Ayar</th>
-                                    <th>Giriş (g)</th>
-                                    <th>Çıkış (g)</th>
-                                    <th>Net (g)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for setting, data in balance.items() %}
-                                <tr>
-                                    <td data-label="Ayar">{{ setting }}</td>
-                                    <td data-label="Giriş (g)" class="text-success">{{ "%.2f"|format(data.inputs) }}</td>
-                                    <td data-label="Çıkış (g)" class="text-danger">{{ "%.2f"|format(data.outputs) }}</td>
-                                    <td data-label="Net (g)" class="{{ 'text-danger fw-bold' if data.net > 0 else 'text-success fw-bold' if data.net < 0 else '' }}">
-                                        {{ "%.2f"|format(data.net) }}
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-center py-3">
-                                        <div class="alert alert-info mb-0">
-                                            <i class="fas fa-info-circle me-2"></i>Henüz kayıtlı işlem bulunmamaktadır
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
             </div>
         </div>
     </div>
@@ -127,18 +84,50 @@
     <div class="col-12">
         <div class="card shadow">
             <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-coins me-2"></i>Has Bakiye Bilgileri</h5>
+                <h5 class="mb-0">
+                    <i class="fas fa-coins me-2"></i>Has Bakiye Bilgileri
+                    <i class="fas fa-info-circle ms-2" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#hasBalanceModal"></i>
+                </h5>
                 <span class="badge bg-dark">{{ "%.4f"|format(pure_gold_balance.total_net_pure_gold) }} g</span>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4 mb-3 mb-md-0">
-                        <div class="card bg-light h-100">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">
+            <div class="card-body text-center">
+                <div class="card bg-light border-primary h-100">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="fas fa-balance-scale me-2 text-primary"></i>Toplam Has Bakiye
+                        </h6>
+                        <h3 class="{{ 'text-danger' if pure_gold_balance.total_net_pure_gold > 0 else 'text-success' if pure_gold_balance.total_net_pure_gold < 0 else '' }}">
+                            {{ "%.4f"|format(pure_gold_balance.total_net_pure_gold) }} g
+                        </h3>
+                        <div class="small text-muted">
+                            Has + İşçilik Has Karşılığı
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Has Bakiye Detay Modal -->
+<div class="modal fade" id="hasBalanceModal" tabindex="-1" aria-labelledby="hasBalanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="hasBalanceModalLabel">
+                    <i class="fas fa-coins me-2"></i>Has Bakiye Detayları
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-center">
                                     <i class="fas fa-coins me-2 text-warning"></i>Has Altın
                                 </h6>
-                                <h3 class="{{ 'text-danger' if pure_gold_balance.net_pure_gold > 0 else 'text-success' if pure_gold_balance.net_pure_gold < 0 else '' }}">
+                                <h3 class="text-center {{ 'text-danger' if pure_gold_balance.net_pure_gold > 0 else 'text-success' if pure_gold_balance.net_pure_gold < 0 else '' }}">
                                     {{ "%.4f"|format(pure_gold_balance.net_pure_gold) }} g
                                 </h3>
                                 <div class="d-flex justify-content-between small">
@@ -148,13 +137,13 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3 mb-md-0">
-                        <div class="card bg-light h-100">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title text-center">
                                     <i class="fas fa-tools me-2 text-secondary"></i>İşçilik Has Karşılığı
                                 </h6>
-                                <h3 class="{{ 'text-danger' if pure_gold_balance.net_labor_pure_gold > 0 else 'text-success' if pure_gold_balance.net_labor_pure_gold < 0 else '' }}">
+                                <h3 class="text-center {{ 'text-danger' if pure_gold_balance.net_labor_pure_gold > 0 else 'text-success' if pure_gold_balance.net_labor_pure_gold < 0 else '' }}">
                                     {{ "%.4f"|format(pure_gold_balance.net_labor_pure_gold) }} g
                                 </h3>
                                 <div class="d-flex justify-content-between small">
@@ -164,22 +153,25 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card bg-light h-100 border-primary">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">
+                    <div class="col-12">
+                        <div class="card bg-light border-primary">
+                            <div class="card-body">
+                                <h6 class="card-title text-center">
                                     <i class="fas fa-balance-scale me-2 text-primary"></i>Toplam Has Bakiye
                                 </h6>
-                                <h3 class="{{ 'text-danger' if pure_gold_balance.total_net_pure_gold > 0 else 'text-success' if pure_gold_balance.total_net_pure_gold < 0 else '' }}">
+                                <h3 class="text-center {{ 'text-danger' if pure_gold_balance.total_net_pure_gold > 0 else 'text-success' if pure_gold_balance.total_net_pure_gold < 0 else '' }}">
                                     {{ "%.4f"|format(pure_gold_balance.total_net_pure_gold) }} g
                                 </h3>
-                                <div class="small text-muted">
+                                <div class="small text-muted text-center">
                                     Has + İşçilik Has Karşılığı
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
             </div>
         </div>
     </div>
