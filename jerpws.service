@@ -1,15 +1,22 @@
 [Unit]
 Description=JerpWS Flask Application
 After=network.target
+Wants=network.target
 
 [Service]
+Type=simple
 User=menes
 Group=menes
 WorkingDirectory=/home/menes/CursorProjects/JerpWS_V4.0.1/JerpWS_v4.0.1
 Environment="PATH=/home/menes/CursorProjects/JerpWS_V4.0.1/JerpWS_v4.0.1/venv/bin"
 Environment="PYTHONPATH=/home/menes/CursorProjects/JerpWS_V4.0.1/JerpWS_v4.0.1"
-ExecStart=/home/menes/CursorProjects/JerpWS_V4.0.1/JerpWS_v4.0.1/venv/bin/python -m gunicorn --config gunicorn.conf.py wsgi:app --log-level debug
+
+# Otomatik kurulum ve başlatma
+ExecStartPre=/bin/bash -c 'if [ ! -d "venv" ] || [ ! -f "venv/bin/gunicorn" ]; then /usr/bin/python3 setup.py; fi'
+ExecStart=/bin/bash start.sh
+
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target 

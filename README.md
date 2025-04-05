@@ -1,100 +1,172 @@
-# JerpWS (Jewelry ERP - Workshop)
+# JerpWS - Kuyumcu Yönetim Sistemi
 
-Modern kuyumcu atölyesi yönetim sistemi.
+JerpWS, kuyumcular için geliştirilmiş modern bir web tabanlı yönetim sistemidir. Sistem hem Windows hem de Linux işletim sistemlerinde çalışabilir şekilde tasarlanmıştır.
 
-## Özellikler
+## Sistem Gereksinimleri
 
-- Kullanıcı yönetimi ve yetkilendirme
-- Ürün ve stok takibi
-- Müşteri yönetimi
-- Sipariş takibi
-- Raporlama
-- HTTPS güvenliği
-- RESTful API
+### Windows için:
+- Python 3.8 veya üzeri
+- NSSM (Non-Sucking Service Manager)
+- Git (opsiyonel)
+
+### Linux için:
+- Python 3.8 veya üzeri
+- systemd
+- Git (opsiyonel)
 
 ## Kurulum
 
+### Windows'ta Kurulum
+
+1. Python'u yükleyin:
+   - [Python'un resmi sitesinden](https://www.python.org/downloads/) Python 3.8 veya üzerini indirin
+   - Kurulum sırasında "Add Python to PATH" seçeneğini işaretleyin
+
+2. NSSM'i yükleyin:
+   - [NSSM'in resmi sitesinden](https://nssm.cc/download) son sürümü indirin
+   - Zip dosyasını açın
+   - `nssm.exe` dosyasını `C:\Windows\System32` dizinine kopyalayın veya PATH'e ekleyin
+
+3. Uygulamayı indirin:
+   ```batch
+   git clone https://github.com/user/JerpWS.git
+   cd JerpWS
+   ```
+   veya zip olarak indirip açın.
+
+4. Servisi kurun:
+   ```batch
+   install_windows_service.bat
+   ```
+   
+   Bu komut otomatik olarak:
+   - Python sanal ortamını oluşturacak
+   - Gerekli paketleri yükleyecek
+   - Veritabanını oluşturacak
+   - Windows servisi olarak sistemi kuracak
+   - Servisi başlatacak
+
+### Linux'ta Kurulum
+
 1. Gerekli paketleri yükleyin:
+   ```bash
+   sudo apt update
+   sudo apt install python3 python3-pip python3-venv
+   ```
+
+2. Uygulamayı indirin:
+   ```bash
+   git clone https://github.com/user/JerpWS.git
+   cd JerpWS
+   ```
+   veya zip olarak indirip açın.
+
+3. Servisi kurun:
+   ```bash
+   sudo ./install_linux_service.sh
+   ```
+
+   Bu komut otomatik olarak:
+   - Python sanal ortamını oluşturacak
+   - Gerekli paketleri yükleyecek
+   - Veritabanını oluşturacak
+   - systemd servisi olarak sistemi kuracak
+   - Servisi başlatacak
+
+## Servis Yönetimi
+
+### Windows'ta Servis Yönetimi
+
+```batch
+# Servis durumunu kontrol et
+sc query JerpWS
+
+# Servisi başlat
+net start JerpWS
+
+# Servisi durdur
+net stop JerpWS
+
+# Servisi yeniden başlat
+net stop JerpWS && net start JerpWS
+
+# Logları görüntüle
+type logs\service.log
+```
+
+### Linux'ta Servis Yönetimi
+
 ```bash
-sudo apt-get update
-sudo apt-get install python3-venv nginx
+# Servis durumunu kontrol et
+sudo systemctl status jerpws
+
+# Servisi başlat
+sudo systemctl start jerpws
+
+# Servisi durdur
+sudo systemctl stop jerpws
+
+# Servisi yeniden başlat
+sudo systemctl restart jerpws
+
+# Logları görüntüle
+sudo journalctl -u jerpws
 ```
 
-2. Sanal ortam oluşturun ve aktifleştirin:
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
+## SSL Sertifikaları
 
-3. Bağımlılıkları yükleyin:
-```bash
-pip install -r requirements.txt
-```
+Sistem varsayılan olarak self-signed SSL sertifikaları ile gelir. Production ortamında kullanmadan önce:
 
-4. Veritabanını oluşturun:
-```bash
-python init_db.py
-```
+1. Güvenilir bir sertifika sağlayıcısından SSL sertifikası alın
+2. Sertifikaları `ssl` dizinine yerleştirin:
+   - `ssl/cert.pem`: Sertifika dosyası
+   - `ssl/key.pem`: Özel anahtar dosyası
 
-5. Admin kullanıcısı oluşturun:
-```bash
-python create_admin.py
-```
+## Güvenlik Ayarları
 
-6. SSL sertifikalarını oluşturun:
-```bash
-mkdir ssl
-openssl req -x509 -newkey rsa:4096 -nodes -out ssl/cert.pem -keyout ssl/key.pem -days 365
-```
+Production ortamında kullanmadan önce:
 
-7. Nginx yapılandırmasını kopyalayın:
-```bash
-sudo cp nginx.conf /etc/nginx/sites-enabled/jerpws.conf
-sudo systemctl restart nginx
-```
+1. `.env` dosyasındaki güvenlik anahtarlarını değiştirin:
+   ```
+   SECRET_KEY=<güvenli-rastgele-anahtar>
+   JWT_SECRET_KEY=<güvenli-rastgele-anahtar>
+   ```
 
-8. Uygulamayı başlatın:
-```bash
-gunicorn -c gunicorn.conf.py wsgi:application
-```
+2. Veritabanı yedeklemelerini düzenli kontrol edin:
+   - Günlük yedekler: `backups/daily`
+   - Haftalık yedekler: `backups/weekly`
+   - Aylık yedekler: `backups/monthly`
 
-## Dizin Yapısı
+## Sorun Giderme
 
-```
-.
-├── app/                # Ana uygulama kodu
-├── instance/          # Veritabanı ve geçici dosyalar
-├── logs/             # Log dosyaları
-├── migrations/       # Veritabanı migrasyonları
-├── ssl/             # SSL sertifikaları
-├── .venv/           # Sanal ortam
-├── gunicorn.conf.py # Gunicorn yapılandırması
-├── nginx.conf       # Nginx yapılandırması
-├── wsgi.py          # WSGI uygulaması
-└── requirements.txt # Bağımlılıklar
-```
+### Windows'ta Sık Karşılaşılan Sorunlar
 
-## Güvenlik
+1. "NSSM bulunamadı" hatası:
+   - NSSM'in doğru yüklendiğinden emin olun
+   - PATH'e eklendiğini kontrol edin
 
-- HTTPS üzerinden güvenli iletişim
-- JWT tabanlı kimlik doğrulama
-- Rol tabanlı yetkilendirme
-- Güvenli şifre hashleme
+2. Servis başlatılamıyor:
+   - Logları kontrol edin: `logs\service.log`
+   - Python'un PATH'te olduğunu kontrol edin
+   - Yönetici olarak cmd açıp tekrar deneyin
+
+### Linux'ta Sık Karşılaşılan Sorunlar
+
+1. Servis başlatılamıyor:
+   - Logları kontrol edin: `sudo journalctl -u jerpws`
+   - Dizin izinlerini kontrol edin
+   - Python sanal ortamını kontrol edin
+
+2. Port hatası:
+   - 5000 portunun kullanılabilir olduğunu kontrol edin
+   - Gerekirse portu değiştirin: `gunicorn --bind 0.0.0.0:5001`
 
 ## Lisans
 
-Copyright (c) 2025 ARD INC. Tüm hakları saklıdır.
+Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosyasına bakın.
 
 ## İletişim
 
-Sorularınız veya önerileriniz için:
-- E-posta: ornek@email.com
-- GitHub Issues: [Proje Issues](https://github.com/kullaniciadi/JerpWS_v3.2/issues)
-
-## Katkıda Bulunma
-
-1. Bu depoyu fork edin
-2. Yeni bir özellik dalı oluşturun (`git checkout -b yeni-ozellik`)
-3. Değişikliklerinizi commit edin (`git commit -am 'Yeni özellik eklendi'`)
-4. Dalınıza push yapın (`git push origin yeni-ozellik`)
-5. Bir Pull Request oluşturun
+Sorunlar ve öneriler için:
+- GitHub Issues
+- E-posta: destek@jerpws.com

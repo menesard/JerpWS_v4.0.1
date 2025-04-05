@@ -6,6 +6,7 @@ import tarfile
 import gzip
 from pathlib import Path
 import subprocess
+import platform
 
 # Yedekleme dizinleri
 BACKUP_DIR = Path("backups")
@@ -15,18 +16,27 @@ MONTHLY_DIR = BACKUP_DIR / "monthly"
 
 # Yedeklenecek dosyalar ve dizinler
 BACKUP_ITEMS = [
-    "instance/jewelry.db",  # Veritabanı
-    "logs",                 # Log dosyaları
+    Path("instance") / "jewelry.db",  # Veritabanı
+    Path("logs"),                     # Log dosyaları
 ]
 
-def copy_with_sudo(source, dest):
-    """Sudo ile dosya kopyalama"""
+def copy_file(source, dest):
+    """Platform bağımsız dosya kopyalama"""
     try:
-        subprocess.run(['sudo', 'cp', '-r', str(source), str(dest)], check=True)
-    except subprocess.CalledProcessError as e:
+        if platform.system() == "Linux":
+            # Linux'ta sudo kullan
+            try:
+                subprocess.run(['sudo', 'cp', '-r', str(source), str(dest)], check=True)
+            except subprocess.CalledProcessError:
+                # Sudo başarısız olursa normal kopyalama dene
+                shutil.copy2(str(source), str(dest))
+        else:
+            # Windows ve diğer sistemlerde normal kopyalama
+            shutil.copy2(str(source), str(dest))
+        return True
+    except Exception as e:
         print(f"Hata: {source} kopyalanamadı: {e}")
         return False
-    return True
 
 def create_backup(backup_type="daily"):
     """Belirtilen tipte yedek oluşturur"""
@@ -42,25 +52,26 @@ def create_backup(backup_type="daily"):
     
     # Geçici dizin oluştur
     temp_dir = BACKUP_DIR / "temp"
-    temp_dir.mkdir(exist_ok=True)
+    temp_dir.mkdir(exist_ok=True, parents=True)
     
     try:
         # Dosyaları kopyala
         for item in BACKUP_ITEMS:
             source = Path(item)
             if source.exists():
+                dest = temp_dir / source.name
                 if source.is_file():
-                    shutil.copy2(source, temp_dir / source.name)
+                    copy_file(source, dest)
                 else:
-                    shutil.copytree(source, temp_dir / source.name, dirs_exist_ok=True)
+                    shutil.copytree(source, dest, dirs_exist_ok=True)
         
         # SSL sertifikalarını ayrıca kopyala
         ssl_source = Path("ssl")
         if ssl_source.exists():
             ssl_temp = temp_dir / "ssl"
             ssl_temp.mkdir(exist_ok=True)
-            copy_with_sudo(ssl_source / "cert.pem", ssl_temp / "cert.pem")
-            copy_with_sudo(ssl_source / "key.pem", ssl_temp / "key.pem")
+            copy_file(ssl_source / "cert.pem", ssl_temp / "cert.pem")
+            copy_file(ssl_source / "key.pem", ssl_temp / "key.pem")
         
         # Yedek dosyasını oluştur
         backup_path = target_dir / f"{backup_name}.tar.gz"
@@ -74,7 +85,8 @@ def create_backup(backup_type="daily"):
         
     finally:
         # Geçici dizini temizle
-        shutil.rmtree(temp_dir)
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
 
 def cleanup_old_backups(backup_dir, backup_type):
     """Eski yedekleri temizler"""

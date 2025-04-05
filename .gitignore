@@ -19,6 +19,9 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Virtual Environment
 .venv/
@@ -43,6 +46,12 @@ instance/*.db
 logs/*
 !logs/.gitkeep
 
+# Backups
+backups/**/
+!backups/daily/.gitkeep
+!backups/weekly/.gitkeep
+!backups/monthly/.gitkeep
+
 # SSL Certificates
 ssl/*
 !ssl/.gitkeep
@@ -55,56 +64,7 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Nginx
+# Service files
 *.pid
 *.lock
-
-# Gunicorn
-*.pid
-*.lock
-*.sock
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-venv/
-ENV/
-env/
-.env
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Database
-*.db
-*.sqlite3
-
-# Logs
-*.log
-
-# Local development
-.DS_Store
-Thumbs.db 
+*.sock 
